@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # Repository variables (Settings → Secrets and variables → Actions → Variables).
-      # Optional: without them the APK builds with sign-in switched off.
+      # Optional overrides (Settings → Secrets and variables → Actions). When empty, the public
+      # project defaults in gradle.properties are used.
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
     steps:
@@ -32,12 +32,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Check Supabase settings
+      # Fail if a server-only secret was ever committed. Only the publishable key may be in code.
+      - name: Check no secret keys are committed
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo "::warning title=Sign-in disabled in this APK::Repository variables SUPABASE_URL and/or SUPABASE_PUBLISHABLE_KEY are not set (Settings → Secrets and variables → Actions → Variables). The app builds, but sign-in will show 'not set up'. See docs/SUPABASE_SETUP.md step 4b."
-          else
-            echo "Supabase settings found: $SUPABASE_URL"
+          if git grep -nIE 'sb_secret_[A-Za-z0-9_-]+|"role" *: *"service_role"|service_role_key *=' -- ':!.github/workflows/android.yml'; then
+            echo "::error title=Secret key in repository::Remove the secret key above and rotate it in the Supabase dashboard."
+            exit 1
           fi
 
       - name: Unit tests
@@ -48,6 +48,16 @@ jobs:
 
       - name: Build debug APK
         run: ./gradlew --no-daemon assembleDebug
+
+      - name: Show which Supabase project the APK uses
+        run: |
+          CONFIG=app/build/generated/source/buildConfig/debug/com/vsjbakery/app/BuildConfig.java
+          grep 'SUPABASE_URL' "$CONFIG"
+          if grep -q 'SUPABASE_URL = "https://' "$CONFIG" && grep -q 'SUPABASE_PUBLISHABLE_KEY = "sb_publishable_' "$CONFIG"; then
+            echo "Sign-in is configured in this APK."
+          else
+            echo "::warning title=Sign-in disabled in this APK::No Supabase URL / publishable key was found at build time."
+          fi
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

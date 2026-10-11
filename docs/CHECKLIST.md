@@ -13,7 +13,7 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Money formatter in paise with Indian digit grouping (+ unit tests)
 - ✅ GitHub Actions CI: unit tests, lint, debug APK build and download
 
-## Stage 2 — Backend & sign-in 🟡 (code done — waiting for you to apply it in Supabase)
+## Stage 2 — Backend & sign-in ✅
 - ✅ Migrations: profiles & roles, categories, products, stock ledger, orders, order items, payments, refunds
 - ✅ Row Level Security on every table + minimal table/column privileges
 - ✅ Roles: new accounts are always customers; admin/reports granted only from the dashboard
@@ -24,10 +24,9 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ 41 automated security tests (pgTAP) + CI job on a real Supabase database
 - ✅ App: email/password sign-in, customer sign-up, sign-out, session kept between launches
 - ✅ App: role read from the server; staff entries refuse the wrong role; admin & reports dashboards (tools listed, switched on in Stages 5–6)
-- ✅ Supabase URL/key supplied at build time (`local.properties` / GitHub variables), never committed
-- ⬜ **You:** run the 3 migrations in the SQL editor (`docs/SUPABASE_SETUP.md` step 1)
-- ⬜ **You:** create admin + reports accounts and set their roles (step 3)
-- ⬜ **You:** add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` GitHub variables (step 4b)
+- ✅ Supabase URL + publishable key committed in `gradle.properties` (public by design); overridable; CI blocks secret keys
+- ✅ Migrations applied to the live Supabase project
+- ✅ Admin and reports accounts created; customer, admin and reports sign-in confirmed on the emulator
 - ⬜ Password reset by email (planned with the confirmation landing page)
 
 ## Stage 3 — Catalogue & cart ⬜
