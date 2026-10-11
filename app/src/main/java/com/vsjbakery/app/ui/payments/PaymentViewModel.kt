@@ -84,8 +84,9 @@ class PaymentViewModel(
                 if (result.cancelledByUser) {
                     "Payment cancelled. Your order is still waiting for payment."
                 } else {
-                    "Payment did not go through. No money was taken for this attempt. " +
-                        (result.description?.let { "($it)" } ?: "")
+                    "Payment did not go through, so the order is still waiting for payment. " +
+                        "You can try again." +
+                        (result.description?.let { "\n\nRazorpay said: $it" } ?: "")
                 },
             )
             is CheckoutResult.Completed -> verify(result, session?.orderNumber ?: 0)
