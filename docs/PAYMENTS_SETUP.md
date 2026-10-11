@@ -19,7 +19,10 @@ They take about 20 minutes.
 5. Only then does the database mark the order **paid** and reduce the stock, in one step.
 6. Razorpay also calls our `razorpay-webhook` directly. If the phone closes mid-payment, the order is
    still confirmed.
-7. If an item sold out or the order was cancelled while the customer was paying, the order is **not**
+7. **Third safety net:** when the customer taps **Pay**, or the payment screen on the phone reports an
+   error, the server first asks Razorpay whether this order was already paid. If it was, the order
+   is confirmed and the customer is never charged twice.
+8. If an item sold out or the order was cancelled while the customer was paying, the order is **not**
    marked paid and the money is **refunded automatically**.
 
 ---
@@ -91,7 +94,11 @@ Go to **Razorpay Dashboard (Test Mode) → Account & Settings → Webhooks → A
    test UPI ID for a successful payment. To try a failure, use `failure@razorpay`. Test cards are
    listed at <https://razorpay.com/docs/payments/payments/test-card-details/>.
 3. You should see **"Payment successful"**, and **My orders** shows the order as **Paid**.
-4. Check the server side:
+4. If the app says the payment failed but Razorpay shows it as **captured**, tap **Pay** again. The
+   server finds the captured payment and confirms the order without charging again. Also check the
+   webhook (step 5): **Razorpay → Webhooks → your webhook** lists each delivery and whether it
+   succeeded.
+5. Check the server side:
    - **Supabase → Table Editor → `payments`:** `captured` with a `verified_at` time.
    - **`orders`:** `paid`.
    - **`stock_movements`:** a `sale` row for each item.

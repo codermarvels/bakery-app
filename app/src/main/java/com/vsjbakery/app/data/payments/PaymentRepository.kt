@@ -35,6 +35,12 @@ sealed interface PaymentOutcome {
 class PaymentException(message: String) : Exception(message)
 
 interface PaymentRepository {
+    /**
+     * Asks the server to check with Razorpay whether this order was already paid (for
+     * example the phone missed the success message). Returns null if nothing was paid.
+     */
+    suspend fun syncPayment(orderId: String): PaymentOutcome?
+
     suspend fun startPayment(orderId: String): PaymentSession
 
     suspend fun verifyPayment(razorpayOrderId: String, razorpayPaymentId: String, signature: String): PaymentOutcome
@@ -56,6 +62,22 @@ class SupabasePaymentRepository(private val client: SupabaseClient) : PaymentRep
             throw PaymentException(result.string("error") ?: "Payment service error. Please try again.")
         }
         return result
+    }
+
+    override suspend fun syncPayment(orderId: String): PaymentOutcome? {
+        val result = call(
+            buildJsonObject {
+                put("action", "sync")
+                put("order_id", orderId)
+            },
+        )
+        val outcome = PaymentResults.outcome(
+            result = result.string("result"),
+            orderNumber = result.long("order_number") ?: 0,
+            reason = result.string("reason"),
+            refundStatus = result.string("refund_status"),
+        )
+        return outcome.takeIf { it !is PaymentOutcome.Pending }
     }
 
     override suspend fun startPayment(orderId: String): PaymentSession {

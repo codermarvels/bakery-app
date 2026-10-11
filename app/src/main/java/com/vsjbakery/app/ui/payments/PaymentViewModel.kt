@@ -40,6 +40,9 @@ class PaymentViewModel(
     checkoutResults: CheckoutResults,
 ) : ViewModel() {
 
+    /** The order being paid for, so its payment can be re-checked if the phone reports an error. */
+    private var currentOrderId: String? = null
+
     private val _state = MutableStateFlow<PaymentState>(PaymentState.Idle)
     val state: StateFlow<PaymentState> = _state.asStateFlow()
 
@@ -56,10 +59,17 @@ class PaymentViewModel(
             return
         }
         if (_state.value !is PaymentState.Idle) return
+        currentOrderId = orderId
         _state.value = PaymentState.Starting
         viewModelScope.launch {
             _state.value = try {
-                PaymentState.ReadyToOpen(repo.startPayment(orderId))
+                // An earlier attempt may already have been paid; never charge twice.
+                val alreadySettled = repo.syncPayment(orderId)
+                if (alreadySettled != null) {
+                    PaymentState.Finished(alreadySettled, orderNumberOf(alreadySettled))
+                } else {
+                    PaymentState.ReadyToOpen(repo.startPayment(orderId))
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -80,17 +90,47 @@ class PaymentViewModel(
     private fun onCheckoutResult(result: CheckoutResult) {
         val session = (_state.value as? PaymentState.InCheckout)?.session
         when (result) {
-            is CheckoutResult.Failed -> _state.value = PaymentState.Failed(
-                if (result.cancelledByUser) {
-                    "Payment cancelled. Your order is still waiting for payment."
-                } else {
-                    "Payment did not go through, so the order is still waiting for payment. " +
-                        "You can try again." +
-                        (result.description?.let { "\n\nRazorpay said: $it" } ?: "")
-                },
-            )
+            is CheckoutResult.Failed -> checkAfterFailure(result, session?.orderNumber ?: 0)
             is CheckoutResult.Completed -> verify(result, session?.orderNumber ?: 0)
         }
+    }
+
+    /**
+     * The phone said the payment failed, but the bank may still have taken the money
+     * (this happens with some payment methods). Ask the server to check with Razorpay
+     * before telling the customer it failed.
+     */
+    private fun checkAfterFailure(result: CheckoutResult.Failed, orderNumber: Long) {
+        val failedMessage = if (result.cancelledByUser) {
+            "Payment cancelled. Your order is still waiting for payment."
+        } else {
+            "Payment did not go through, so the order is still waiting for payment. You can try again." +
+                (result.description?.let { "\n\nRazorpay said: $it" } ?: "")
+        }
+        val repo = repository
+        val orderId = currentOrderId
+        if (repo == null || orderId == null) {
+            _state.value = PaymentState.Failed(failedMessage)
+            return
+        }
+        _state.value = PaymentState.Verifying(orderNumber)
+        viewModelScope.launch {
+            _state.value = try {
+                repo.syncPayment(orderId)
+                    ?.let { PaymentState.Finished(it, orderNumberOf(it).takeIf { n -> n > 0 } ?: orderNumber) }
+                    ?: PaymentState.Failed(failedMessage)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PaymentState.Failed(failedMessage)
+            }
+        }
+    }
+
+    private fun orderNumberOf(outcome: PaymentOutcome): Long = when (outcome) {
+        is PaymentOutcome.Paid -> outcome.orderNumber
+        is PaymentOutcome.Refunded -> outcome.orderNumber
+        PaymentOutcome.Pending -> 0
     }
 
     private fun verify(result: CheckoutResult.Completed, orderNumber: Long) {
@@ -111,6 +151,7 @@ class PaymentViewModel(
     }
 
     fun dismiss() {
+        currentOrderId = null
         _state.value = PaymentState.Idle
     }
 }

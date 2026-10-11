@@ -62,6 +62,8 @@ export interface RazorpayPayment {
 export interface PaymentGateway {
   createOrder(amountPaise: number, receipt: string, notes: Record<string, string>): Promise<{ id: string }>;
   fetchPayment(paymentId: string): Promise<RazorpayPayment>;
+  /** All payment attempts made against one Razorpay order. */
+  listOrderPayments(razorpayOrderId: string): Promise<RazorpayPayment[]>;
   capturePayment(paymentId: string, amountPaise: number): Promise<RazorpayPayment>;
   refundPayment(paymentId: string, amountPaise: number, reason: string): Promise<{ id: string }>;
 }
@@ -98,6 +100,14 @@ export class RazorpayApi implements PaymentGateway {
 
   fetchPayment(paymentId: string) {
     return this.call<RazorpayPayment>("GET", `/payments/${encodeURIComponent(paymentId)}`);
+  }
+
+  async listOrderPayments(razorpayOrderId: string) {
+    const page = await this.call<{ items?: RazorpayPayment[] }>(
+      "GET",
+      `/orders/${encodeURIComponent(razorpayOrderId)}/payments`,
+    );
+    return page.items ?? [];
   }
 
   capturePayment(paymentId: string, amountPaise: number) {
@@ -190,6 +200,23 @@ export async function settlePayment(
     }
   }
   return result;
+}
+
+/**
+ * Asks Razorpay whether ANY attempt on this Razorpay order has been paid, and settles it.
+ * This is the safety net for when the phone did not report success (app closed, network
+ * dropped, or the checkout screen reported an error) and the webhook has not arrived.
+ */
+export async function settleRazorpayOrder(
+  gateway: PaymentGateway,
+  db: Rpc,
+  razorpayOrderId: string,
+): Promise<SettleResult> {
+  const attempts = await gateway.listOrderPayments(razorpayOrderId);
+  const paid = attempts.find((p) => p.status === "captured") ??
+    attempts.find((p) => p.status === "authorized");
+  if (!paid) return { result: "not_captured" };
+  return settlePayment(gateway, db, razorpayOrderId, paid.id);
 }
 
 export function requireEnv(name: string): string {
