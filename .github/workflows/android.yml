@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # Repository variables (Settings → Secrets and variables → Actions → Variables).
-      # Optional: without them the APK builds with sign-in switched off.
-      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+      # Settings → Secrets and variables → Actions. Read from the Variables tab, or from the
+      # Secrets tab if they were saved there. Without them the APK builds with sign-in off.
+      SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,7 +37,7 @@ jobs:
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
             echo "::warning title=Sign-in disabled in this APK::Repository variables SUPABASE_URL and/or SUPABASE_PUBLISHABLE_KEY are not set (Settings → Secrets and variables → Actions → Variables). The app builds, but sign-in will show 'not set up'. See docs/SUPABASE_SETUP.md step 4b."
           else
-            echo "Supabase settings found: $SUPABASE_URL"
+            echo "Supabase settings found (URL length ${#SUPABASE_URL}, key length ${#SUPABASE_PUBLISHABLE_KEY})"
           fi
 
       - name: Unit tests
