@@ -32,6 +32,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Check Supabase settings
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "::warning title=Sign-in disabled in this APK::Repository variables SUPABASE_URL and/or SUPABASE_PUBLISHABLE_KEY are not set (Settings → Secrets and variables → Actions → Variables). The app builds, but sign-in will show 'not set up'. See docs/SUPABASE_SETUP.md step 4b."
+          else
+            echo "Supabase settings found: $SUPABASE_URL"
+          fi
+
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
 
