@@ -24,10 +24,9 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ 41 automated security tests (pgTAP) + CI job on a real Supabase database
 - ✅ App: email/password sign-in, customer sign-up, sign-out, session kept between launches
 - ✅ App: role read from the server; staff entries refuse the wrong role; admin & reports dashboards (tools listed, switched on in Stages 5–6)
-- ✅ Supabase URL/key supplied at build time (`local.properties` / GitHub variables), never committed
+- ✅ Supabase URL + publishable key committed in `gradle.properties` (public by design); overridable; CI blocks secret keys
 - ⬜ **You:** run the 3 migrations in the SQL editor (`docs/SUPABASE_SETUP.md` step 1)
 - ⬜ **You:** create admin + reports accounts and set their roles (step 3)
-- ⬜ **You:** add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` GitHub variables (step 4b)
 - ⬜ Password reset by email (planned with the confirmation landing page)
 
 ## Stage 3 — Catalogue & cart ⬜

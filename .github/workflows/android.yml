@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # Settings → Secrets and variables → Actions. Read from the Variables tab, or from the
-      # Secrets tab if they were saved there. Without them the APK builds with sign-in off.
-      SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
-      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_PUBLISHABLE_KEY }}
+      # Optional overrides (Settings → Secrets and variables → Actions). When empty, the public
+      # project defaults in gradle.properties are used.
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,12 +32,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Check Supabase settings
+      # Fail if a server-only secret was ever committed. Only the publishable key may be in code.
+      - name: Check no secret keys are committed
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo "::warning title=Sign-in disabled in this APK::Repository variables SUPABASE_URL and/or SUPABASE_PUBLISHABLE_KEY are not set (Settings → Secrets and variables → Actions → Variables). The app builds, but sign-in will show 'not set up'. See docs/SUPABASE_SETUP.md step 4b."
-          else
-            echo "Supabase settings found (URL length ${#SUPABASE_URL}, key length ${#SUPABASE_PUBLISHABLE_KEY})"
+          if git grep -nIE 'sb_secret_[A-Za-z0-9_-]+|"role" *: *"service_role"|service_role_key *=' -- ':!.github/workflows/android.yml'; then
+            echo "::error title=Secret key in repository::Remove the secret key above and rotate it in the Supabase dashboard."
+            exit 1
           fi
 
       - name: Unit tests

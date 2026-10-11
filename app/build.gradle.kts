@@ -7,15 +7,19 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// Supabase settings come from local.properties (on your computer) or environment variables
-// (in CI). They are never committed to Git. If missing, the app builds but sign-in is off.
+// Supabase settings, first match wins: local.properties (your computer), then environment
+// variables (CI), then the public project defaults in gradle.properties.
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
 
 fun buildSetting(propertyKey: String, environmentKey: String): String =
-    (localProperties.getProperty(propertyKey) ?: System.getenv(environmentKey) ?: "").trim()
+    listOf(
+        localProperties.getProperty(propertyKey),
+        System.getenv(environmentKey),
+        providers.gradleProperty("vsj.$propertyKey").orNull,
+    ).firstOrNull { !it.isNullOrBlank() }?.trim().orEmpty()
 
 android {
     namespace = "com.vsjbakery.app"

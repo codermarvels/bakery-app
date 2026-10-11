@@ -64,36 +64,24 @@ Staff can't sign themselves up as admin; that's on purpose. Create them like thi
 Roles can only be changed here in the dashboard, never from the app. To remove someone's staff access,
 set their role back to `'customer'`.
 
-## 4. Give the app your project's address
+## 4. The app's connection settings (already done)
 
-The app needs two values from **Project Settings → API Keys** (or the **Connect** button):
+The project URL and the **publishable** key are stored in `gradle.properties`
+(`vsj.supabase.url`, `vsj.supabase.publishableKey`), so every build connects automatically.
+That is safe: the publishable key is designed to ship inside apps, and Row Level Security
+limits what it can do.
 
-| Setting | Example |
-|---|---|
-| Project URL | `https://xxxx.supabase.co` |
-| Publishable key | `sb_publishable_…` |
-
-**a) For builds on your computer (Android Studio):** open the file `local.properties` in the project
-folder. Android Studio creates it; it's never uploaded to GitHub. Add:
-
-```properties
-supabase.url=https://xxxx.supabase.co
-supabase.publishableKey=sb_publishable_xxxxxxxx
-```
-
-**b) For the test APK built by GitHub:** on GitHub open the repository → **Settings → Secrets and
-variables → Actions → Variables** tab → **New repository variable**, and add both:
-
-| Name | Value |
-|---|---|
-| `SUPABASE_URL` | your Project URL |
-| `SUPABASE_PUBLISHABLE_KEY` | your publishable key |
-
-Without these values the app still builds, but sign-in shows "not set up in this version".
+- To point a build at a different project, put `supabase.url=` and `supabase.publishableKey=`
+  in `local.properties`, or set the GitHub repository variables `SUPABASE_URL` /
+  `SUPABASE_PUBLISHABLE_KEY`. Either one overrides the defaults.
+- If you ever rotate the publishable key in Supabase, update `gradle.properties`.
+- The CI build fails if a secret key (`sb_secret_…` / `service_role`) is ever committed.
 
 ## 5. Try it
 
-1. Install the new APK (GitHub → **Actions** → latest **Android build** → `vsj-bakery-debug-apk`).
+1. **Uninstall the old app first**, then install the new APK (GitHub → **Actions** → latest
+   **Android build** → `vsj-bakery-debug-apk`). Each GitHub build is signed differently, so
+   Android won't install one over another.
 2. **Account → Customer → Create a customer account**, then sign in.
 3. Sign out, then **Account → Administrator** and sign in with the admin account. You land on
    the admin dashboard.
