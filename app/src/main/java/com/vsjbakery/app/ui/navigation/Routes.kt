@@ -31,7 +31,12 @@ data object AdminHomeRoute
 data object ReportsHomeRoute
 
 @Serializable
-data class OrderPlacedRoute(val orderNumber: Long, val totalPaise: Long, val addedToExisting: Boolean)
+data class OrderPlacedRoute(
+    val orderId: String,
+    val orderNumber: Long,
+    val totalPaise: Long,
+    val addedToExisting: Boolean,
+)
 
 @Serializable
 data object MyOrdersRoute

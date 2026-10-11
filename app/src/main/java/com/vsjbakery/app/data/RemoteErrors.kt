@@ -1,5 +1,6 @@
 package com.vsjbakery.app.data
 
+import com.vsjbakery.app.data.payments.PaymentException
 import io.github.jan.supabase.exceptions.HttpRequestException
 import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 
@@ -10,6 +11,7 @@ object RemoteErrors {
     private const val PERMISSION_DENIED_CODE = "42501"
 
     fun message(e: Throwable): String = when {
+        e is PaymentException -> e.message ?: "Payment service error. Please try again."
         e is PostgrestRestException && e.code == CUSTOMER_MESSAGE_CODE -> e.error
         e is PostgrestRestException && e.code == PERMISSION_DENIED_CODE ->
             e.error.ifBlank { "You are not allowed to do that." }

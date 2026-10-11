@@ -8,6 +8,7 @@ import com.vsjbakery.app.AppContainer
 import com.vsjbakery.app.VsjBakeryApplication
 import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.orders.OrdersViewModel
+import com.vsjbakery.app.ui.payments.PaymentViewModel
 import com.vsjbakery.app.ui.shop.ShopViewModel
 
 private fun CreationExtras.container(): AppContainer =
@@ -21,4 +22,8 @@ val AppViewModelFactory = viewModelFactory {
         ShopViewModel(c.catalogRepository, c.cartRepository, c.orderRepository)
     }
     initializer { OrdersViewModel(container().orderRepository) }
+    initializer {
+        val c = container()
+        PaymentViewModel(c.paymentRepository, c.checkoutResults)
+    }
 }

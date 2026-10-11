@@ -20,6 +20,8 @@ import com.vsjbakery.app.ui.category.CategoryScreen
 import com.vsjbakery.app.ui.home.HomeScreen
 import com.vsjbakery.app.ui.orders.MyOrdersScreen
 import com.vsjbakery.app.ui.orders.OrdersViewModel
+import com.vsjbakery.app.ui.payments.PaymentState
+import com.vsjbakery.app.ui.payments.PaymentViewModel
 import com.vsjbakery.app.ui.shop.ShopViewModel
 import com.vsjbakery.app.ui.staff.AdminHomeScreen
 import com.vsjbakery.app.ui.staff.ReportsHomeScreen
@@ -30,6 +32,7 @@ fun VsjNavHost(
     authViewModel: AuthViewModel,
     shopViewModel: ShopViewModel,
     ordersViewModel: OrdersViewModel,
+    paymentViewModel: PaymentViewModel,
     modifier: Modifier = Modifier,
 ) {
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
@@ -40,6 +43,7 @@ fun VsjNavHost(
     val cartState by shopViewModel.cartState.collectAsStateWithLifecycle()
     val checkout by shopViewModel.checkout.collectAsStateWithLifecycle()
     val ordersState by ordersViewModel.state.collectAsStateWithLifecycle()
+    val paymentState by paymentViewModel.state.collectAsStateWithLifecycle()
 
     // After signing in, staff go straight to their dashboard. Customers go back to where
     // they came from (for example the cart, to finish ordering).
@@ -108,7 +112,9 @@ fun VsjNavHost(
                 onPlaceOrder = shopViewModel::placeOrder,
                 onOrderPlaced = { placed ->
                     shopViewModel.onOrderPlacedHandled()
-                    navController.navigate(OrderPlacedRoute(placed.orderNumber, placed.totalPaise, placed.addedToExisting))
+                    navController.navigate(
+                        OrderPlacedRoute(placed.orderId, placed.orderNumber, placed.totalPaise, placed.addedToExisting),
+                    )
                 },
                 onDismissError = shopViewModel::dismissCheckoutError,
                 onSignIn = { navController.navigate(SignInRoute(AppRole.CUSTOMER)) },
@@ -121,6 +127,13 @@ fun VsjNavHost(
                 orderNumber = route.orderNumber,
                 totalPaise = route.totalPaise,
                 addedToExisting = route.addedToExisting,
+                onPayNow = {
+                    paymentViewModel.pay(route.orderId)
+                    // Show the order list underneath so the new status is visible afterwards.
+                    navController.navigate(MyOrdersRoute) {
+                        popUpTo<OrderPlacedRoute> { inclusive = true }
+                    }
+                },
                 onViewOrders = {
                     navController.navigate(MyOrdersRoute) {
                         popUpTo<OrderPlacedRoute> { inclusive = true }
@@ -134,6 +147,8 @@ fun VsjNavHost(
                 state = ordersState,
                 onLoad = ordersViewModel::load,
                 onCancel = ordersViewModel::cancel,
+                onPay = paymentViewModel::pay,
+                isPaymentInProgress = paymentState !is PaymentState.Idle,
                 onBack = { navController.popBackStack() },
             )
         }

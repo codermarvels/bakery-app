@@ -57,6 +57,8 @@ fun MyOrdersScreen(
     state: OrdersState,
     onLoad: () -> Unit,
     onCancel: (String) -> Unit,
+    onPay: (String) -> Unit,
+    isPaymentInProgress: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -98,7 +100,9 @@ fun MyOrdersScreen(
                         OrderCard(
                             order = order,
                             isCancelling = state.cancellingId == order.id,
+                            isPaymentInProgress = isPaymentInProgress,
                             onCancel = { confirmCancel = order },
+                            onPay = { onPay(order.id) },
                         )
                     }
                 }
@@ -123,7 +127,13 @@ fun MyOrdersScreen(
 }
 
 @Composable
-private fun OrderCard(order: Order, isCancelling: Boolean, onCancel: () -> Unit) {
+private fun OrderCard(
+    order: Order,
+    isCancelling: Boolean,
+    isPaymentInProgress: Boolean,
+    onCancel: () -> Unit,
+    onPay: () -> Unit,
+) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -169,11 +179,18 @@ private fun OrderCard(order: Order, isCancelling: Boolean, onCancel: () -> Unit)
             if (order.status == OrderStatus.PENDING_PAYMENT) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Anything else you order now is added to this order. Online payment is coming " +
-                        "in the next update; unpaid orders are not prepared.",
+                    text = "Pay to confirm your order. Anything else you order before paying is added to it.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onPay,
+                    enabled = !isPaymentInProgress && !isCancelling,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Pay ${Money.formatRupees(order.totalPaise)}")
+                }
             }
             if (order.canCancel) {
                 Spacer(Modifier.height(8.dp))

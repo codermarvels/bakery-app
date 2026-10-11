@@ -294,6 +294,7 @@ fun OrderPlacedScreen(
     orderNumber: Long,
     totalPaise: Long,
     addedToExisting: Boolean,
+    onPayNow: () -> Unit,
     onViewOrders: () -> Unit,
     onContinueShopping: () -> Unit,
     modifier: Modifier = Modifier,
@@ -304,12 +305,14 @@ fun OrderPlacedScreen(
             title = if (addedToExisting) "Added to order #$orderNumber" else "Order #$orderNumber placed",
             message = buildString {
                 if (addedToExisting) append("These items were added to your unpaid order. ")
-                append("Order total is now ${Money.formatRupees(totalPaise)}. It is awaiting payment. ")
-                append("Online payment is being added in the next update — the bakery prepares orders once they are paid.")
+                append("Order total is ${Money.formatRupees(totalPaise)}. ")
+                append("Pay now to confirm it — the bakery prepares orders once they are paid.")
             },
             action = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Button(onClick = onViewOrders) { Text("View my orders") }
+                    Button(onClick = onPayNow) { Text("Pay ${Money.formatRupees(totalPaise)} now") }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onViewOrders) { Text("View my orders") }
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = onContinueShopping) { Text("Continue shopping") }
                 }
