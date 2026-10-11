@@ -1,7 +1,7 @@
 -- Tests for server-verified payments (Stage 4). Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(31);
+select plan(34);
 
 -- ---------------------------------------------------------------- fixtures (as owner)
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -27,6 +27,11 @@ select (public.place_order(
     '[{"product_id":"aaaaaaaa-0000-0000-0000-000000000001","quantity":2},
       {"product_id":"aaaaaaaa-0000-0000-0000-000000000002","quantity":4}]') ->> 'order_id')::uuid as id;
 grant select on o1 to public;
+
+-- ---------------------------------------------------------------- server role can read what it checks
+select ok(has_table_privilege('service_role', 'public.orders', 'SELECT'), 'server role can read orders');
+select ok(has_table_privilege('service_role', 'public.payments', 'SELECT'), 'server role can read payments');
+select ok(has_table_privilege('service_role', 'public.refunds', 'SELECT'), 'server role can read refunds');
 
 -- ---------------------------------------------------------------- the app cannot reach these
 select throws_ok(
@@ -176,8 +181,11 @@ select is((select status::text from public.orders where id = (select id from o3)
     'the unfulfillable order is cancelled');
 
 -- ---------------------------------------------------------------- failed attempts
+-- Test setup only (as the database owner); the server itself never writes tables directly.
+reset role;
 insert into public.payments (order_id, provider, provider_order_id, amount_paise)
 values ((select id from o3), 'razorpay', 'order_D', 45000);
+set local role service_role;
 select public.mark_payment_failed('order_D');
 select is((select status::text from public.payments where provider_order_id = 'order_D'), 'failed',
     'a failed attempt is marked failed');
