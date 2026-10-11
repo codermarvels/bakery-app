@@ -293,6 +293,7 @@ private fun CheckoutPanel(
 fun OrderPlacedScreen(
     orderNumber: Long,
     totalPaise: Long,
+    addedToExisting: Boolean,
     onViewOrders: () -> Unit,
     onContinueShopping: () -> Unit,
     modifier: Modifier = Modifier,
@@ -300,9 +301,12 @@ fun OrderPlacedScreen(
     Column(modifier = modifier.fillMaxSize()) {
         EmptyState(
             icon = Icons.Outlined.ShoppingBag,
-            title = "Order #$orderNumber placed",
-            message = "Total ${Money.formatRupees(totalPaise)}. Your order is awaiting payment. " +
-                "Online payment is being added in the next update — the bakery prepares orders once they are paid.",
+            title = if (addedToExisting) "Added to order #$orderNumber" else "Order #$orderNumber placed",
+            message = buildString {
+                if (addedToExisting) append("These items were added to your unpaid order. ")
+                append("Order total is now ${Money.formatRupees(totalPaise)}. It is awaiting payment. ")
+                append("Online payment is being added in the next update — the bakery prepares orders once they are paid.")
+            },
             action = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Button(onClick = onViewOrders) { Text("View my orders") }

@@ -1,7 +1,7 @@
 -- Tests for server-side pickup ordering (Stage 3). Run with: supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(38);
 
 -- ---------------------------------------------------------------- fixtures (as owner)
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -99,9 +99,10 @@ select throws_ok(
     $$ select public.place_order('[{"product_id":"not-a-uuid","quantity":1}]') $$,
     'P0001', 'Your cart contains an invalid item', 'malformed item is rejected'
 );
-select throws_ok(
+select throws_like(
     $$ select public.place_order('[{"product_id":"aaaaaaaa-0000-0000-0000-000000000001","quantity":6}]') $$,
-    'P0001', 'Only 5 of Plum Cake left', 'cannot order more than is in stock'
+    'Only 5 of Plum Cake left (including what is already in order #%)',
+    'cannot order more than is in stock (counting the unpaid order)'
 );
 select throws_ok(
     $$ select public.place_order('[{"product_id":"aaaaaaaa-0000-0000-0000-000000000005","quantity":1}]') $$,
@@ -162,16 +163,68 @@ select throws_ok(
     '42501', null, 'admin account cannot place customer orders'
 );
 
--- ---------------------------------------------------------------- unpaid-order limit
-reset role;
-insert into public.orders (customer_id, total_paise)
-select '00000000-0000-0000-0000-0000000000c2', 100 from generate_series(1, 5);
-set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000c2"}', true);
-select throws_ok(
-    $$ select public.place_order('[{"product_id":"aaaaaaaa-0000-0000-0000-000000000002","quantity":1}]') $$,
-    'P0001', null, 'too many unpaid orders are refused'
+-- ---------------------------------------------------------------- one unpaid order per customer
+-- Customer c1's first order was cancelled above, so the next checkout starts a new order.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000c1"}', true);
+create temporary table first_checkout as
+select public.place_order('[{"product_id":"aaaaaaaa-0000-0000-0000-000000000002","quantity":2}]') as r;
+select is((select (r ->> 'added_to_existing')::boolean from first_checkout), false,
+    'with no unpaid order, checkout creates a new order');
+
+create temporary table second_checkout as
+select public.place_order(
+    '[{"product_id":"aaaaaaaa-0000-0000-0000-000000000002","quantity":3},
+      {"product_id":"aaaaaaaa-0000-0000-0000-000000000001","quantity":1}]',
+    'Collect at 6'
+) as r;
+select is((select (r ->> 'added_to_existing')::boolean from second_checkout), true,
+    'second checkout is added to the unpaid order');
+select is((select r ->> 'order_id' from second_checkout), (select r ->> 'order_id' from first_checkout),
+    'it is the same order');
+select is(
+    (select count(*)::int from public.orders where status = 'pending_payment'),
+    1, 'customer still has exactly one unpaid order'
 );
+select is(
+    (select quantity from public.order_items
+      where order_id = (select (r ->> 'order_id')::uuid from first_checkout)
+        and product_id = 'aaaaaaaa-0000-0000-0000-000000000002'),
+    5, 'quantities of the same item are added together (2 + 3)'
+);
+select is(
+    (select total_paise from public.orders where id = (select (r ->> 'order_id')::uuid from first_checkout)),
+    57500::bigint, 'combined total is recalculated: 5 x 25 + 1 x 450 = 575 rupees'
+);
+select is(
+    (select pickup_note from public.orders where id = (select (r ->> 'order_id')::uuid from first_checkout)),
+    'Collect at 6', 'a new pickup note replaces the old one'
+);
+select throws_ok(
+    $$ select public.place_order('[{"product_id":"aaaaaaaa-0000-0000-0000-000000000001","quantity":5}]') $$,
+    'P0001', null, 'stock is checked for the combined quantity (1 already + 5 > 5 in stock)'
+);
+select is(
+    (select total_paise from public.orders where id = (select (r ->> 'order_id')::uuid from first_checkout)),
+    57500::bigint, 'a refused checkout leaves the unpaid order unchanged'
+);
+
+-- Once a payment has been started for an order, it must never change.
+reset role;
+insert into public.payments (order_id, provider, amount_paise)
+select (r ->> 'order_id')::uuid, 'test-gateway', 57500 from first_checkout;
+update public.products set price_paise = 3000 where id = 'aaaaaaaa-0000-0000-0000-000000000002';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000c1"}', true);
+create temporary table third_checkout as
+select public.place_order('[{"product_id":"aaaaaaaa-0000-0000-0000-000000000002","quantity":1}]') as r;
+select isnt((select r ->> 'order_id' from third_checkout), (select r ->> 'order_id' from first_checkout),
+    'an order with a payment in progress is not changed; a new order is created');
+select is(
+    (select total_paise from public.orders where id = (select (r ->> 'order_id')::uuid from first_checkout)),
+    57500::bigint, 'the order being paid keeps its amount'
+);
+select is((select (r ->> 'total_paise')::bigint from third_checkout), 3000::bigint,
+    'the new order uses the current price');
 
 select * from finish();
 rollback;

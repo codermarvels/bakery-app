@@ -108,7 +108,7 @@ fun VsjNavHost(
                 onPlaceOrder = shopViewModel::placeOrder,
                 onOrderPlaced = { placed ->
                     shopViewModel.onOrderPlacedHandled()
-                    navController.navigate(OrderPlacedRoute(placed.orderNumber, placed.totalPaise))
+                    navController.navigate(OrderPlacedRoute(placed.orderNumber, placed.totalPaise, placed.addedToExisting))
                 },
                 onDismissError = shopViewModel::dismissCheckoutError,
                 onSignIn = { navController.navigate(SignInRoute(AppRole.CUSTOMER)) },
@@ -120,6 +120,7 @@ fun VsjNavHost(
             OrderPlacedScreen(
                 orderNumber = route.orderNumber,
                 totalPaise = route.totalPaise,
+                addedToExisting = route.addedToExisting,
                 onViewOrders = {
                     navController.navigate(MyOrdersRoute) {
                         popUpTo<OrderPlacedRoute> { inclusive = true }

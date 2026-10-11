@@ -92,6 +92,8 @@ limits what it can do.
 
 1. **SQL Editor → New query:** paste and **Run**
    `supabase/migrations/20261012090000_place_order.sql`. This adds the secure ordering function.
+   Then, in a new query, paste and **Run** `supabase/migrations/20261012120000_merge_unpaid_orders.sql`.
+   This makes new checkouts add to an existing unpaid order.
 2. **Optional test products:** paste and run `supabase/snippets/test_products.sql`. It adds seven
    sample items (marked `[TEST]` in their description) with opening stock, so the shop has
    something to show. To hide them later, run:
@@ -106,7 +108,11 @@ How ordering works:
   each item is on sale and in stock, and works out the total itself.
 - New orders are **awaiting payment**. Stock is **not** reduced yet. It's reduced only when a
   payment is verified by the server (Stage 4).
-- Customers can cancel their own unpaid orders. One customer can have at most 5 unpaid orders a day.
+- **One unpaid order per customer:** while an order is awaiting payment, a new checkout adds its
+  items to that order. The server re-checks stock for the combined amounts and uses today's prices.
+  Once a payment has been started for an order, it is never changed; a new checkout then starts a
+  new order.
+- Customers can cancel their own unpaid orders.
 - Admin and reports accounts can't place orders, so staff accounts stay clean.
 
 ## How the security works (plain language)
@@ -124,4 +130,4 @@ How ordering works:
   server code with secret keys can do that (Stage 4).
 - Stock can never go below zero.
 
-These rules are checked by 68 automated tests in `supabase/tests/database/` (run with `supabase test db`).
+These rules are checked by 79 automated tests in `supabase/tests/database/` (run with `supabase test db`).

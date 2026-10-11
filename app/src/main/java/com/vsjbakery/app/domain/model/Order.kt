@@ -43,8 +43,16 @@ data class Order(
     val canCancel: Boolean get() = status == OrderStatus.PENDING_PAYMENT
 }
 
-/** What the server returns after creating an order. */
-data class PlacedOrder(val orderId: String, val orderNumber: Long, val totalPaise: Long)
+/**
+ * What the server returns after checkout. [addedToExisting] is true when the items were
+ * added to the customer's existing unpaid order instead of starting a new one.
+ */
+data class PlacedOrder(
+    val orderId: String,
+    val orderNumber: Long,
+    val totalPaise: Long,
+    val addedToExisting: Boolean = false,
+)
 
 object OrderDates {
     private val formatter = DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH)

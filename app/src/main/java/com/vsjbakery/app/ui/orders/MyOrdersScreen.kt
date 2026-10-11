@@ -169,7 +169,8 @@ private fun OrderCard(order: Order, isCancelling: Boolean, onCancel: () -> Unit)
             if (order.status == OrderStatus.PENDING_PAYMENT) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Online payment is coming in the next update. Unpaid orders are not prepared.",
+                    text = "Anything else you order now is added to this order. Online payment is coming " +
+                        "in the next update; unpaid orders are not prepared.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

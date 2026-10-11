@@ -17,7 +17,10 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
 interface OrderRepository {
-    /** Sends product ids and quantities only; the server decides prices and the total. */
+    /**
+     * Sends product ids and quantities only; the server decides prices and the total.
+     * If the customer already has an unpaid order, the server adds the items to it.
+     */
     suspend fun placeOrder(quantities: Map<String, Int>, pickupNote: String?): PlacedOrder
 
     suspend fun myOrders(): List<Order>
@@ -30,6 +33,7 @@ private data class PlacedOrderRow(
     @SerialName("order_id") val orderId: String,
     @SerialName("order_number") val orderNumber: Long,
     @SerialName("total_paise") val totalPaise: Long,
+    @SerialName("added_to_existing") val addedToExisting: Boolean = false,
 )
 
 @Serializable
@@ -66,7 +70,7 @@ class SupabaseOrderRepository(private val client: SupabaseClient) : OrderReposit
             put("p_pickup_note", pickupNote?.trim()?.ifBlank { null })
         }
         val row = client.postgrest.rpc("place_order", params).decodeAs<PlacedOrderRow>()
-        return PlacedOrder(row.orderId, row.orderNumber, row.totalPaise)
+        return PlacedOrder(row.orderId, row.orderNumber, row.totalPaise, row.addedToExisting)
     }
 
     override suspend fun myOrders(): List<Order> =

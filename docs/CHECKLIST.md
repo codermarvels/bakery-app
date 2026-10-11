@@ -37,9 +37,11 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Place pickup order: server-side `place_order` recalculates prices and total, checks stock; app sends ids + quantities only
 - ✅ Orders start as "Awaiting payment"; stock is not touched until payment is verified (Stage 4)
 - ✅ My orders (customer): list with items, total, status; cancel unpaid orders
-- ✅ Staff accounts cannot place orders; unpaid-order limit (5 per day)
-- ✅ 27 new database tests (68 total) + cart/order unit tests
-- ⬜ **You:** run `20261012090000_place_order.sql` in the SQL editor (`docs/SUPABASE_SETUP.md` step 6)
+- ✅ One unpaid order per customer: new checkouts are added to it (stock re-checked, current prices); orders with a payment in progress are never changed
+- ✅ Staff accounts cannot place orders
+- ✅ 38 ordering tests + 41 security tests (79 database tests) + cart/order unit tests
+- ✅ `20261012090000_place_order.sql` applied; ordering confirmed on the emulator
+- ⬜ **You:** run `20261012120000_merge_unpaid_orders.sql` in the SQL editor (`docs/SUPABASE_SETUP.md` step 6)
 - ⬜ **You:** optionally run `supabase/snippets/test_products.sql` and upload a few photos
 - ⬜ Cart is kept in memory only (cleared if Android closes the app) — persistence can be added later
 
