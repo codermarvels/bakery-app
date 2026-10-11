@@ -15,6 +15,13 @@ data class SupabaseConfig(val url: String, val publishableKey: String) {
     val isConfigured: Boolean
         get() = url.startsWith("https://") && publishableKey.isNotBlank()
 
+    /** Public web address of a photo stored in the product-images bucket. */
+    fun productImageUrl(path: String?): String? = when {
+        path.isNullOrBlank() -> null
+        path.startsWith("https://") -> path
+        else -> "${url.trimEnd('/')}/storage/v1/object/public/$PRODUCT_IMAGES_BUCKET/${path.trimStart('/')}"
+    }
+
     fun createClient(): SupabaseClient = createSupabaseClient(
         supabaseUrl = url,
         supabaseKey = publishableKey,
@@ -22,5 +29,9 @@ data class SupabaseConfig(val url: String, val publishableKey: String) {
         // Auth keeps the login session on the device and refreshes it automatically.
         install(Auth)
         install(Postgrest)
+    }
+
+    companion object {
+        const val PRODUCT_IMAGES_BUCKET = "product-images"
     }
 }

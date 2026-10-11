@@ -1,11 +1,7 @@
 package com.vsjbakery.app.ui.auth
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import com.vsjbakery.app.VsjBakeryApplication
 import com.vsjbakery.app.data.auth.AuthRepository
 import com.vsjbakery.app.data.auth.AuthResult
 import com.vsjbakery.app.data.auth.AuthState
@@ -98,14 +94,5 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         if (_form.value.isSubmitting) return
         _form.value = AuthFormState(isSubmitting = true)
         viewModelScope.launch { _form.value = action() }
-    }
-
-    companion object {
-        val Factory = viewModelFactory {
-            initializer {
-                val app = this[APPLICATION_KEY] as VsjBakeryApplication
-                AuthViewModel(app.container.authRepository)
-            }
-        }
     }
 }

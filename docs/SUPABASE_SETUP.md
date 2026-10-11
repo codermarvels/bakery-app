@@ -88,6 +88,33 @@ limits what it can do.
 4. Try the reports account through **Administrator**. It's refused with
    "This account does not have administrator access". Through **Reports** it works.
 
+## 6. Stage 3 — ordering (do this once)
+
+1. **SQL Editor → New query:** paste and **Run**
+   `supabase/migrations/20261012090000_place_order.sql`. This adds the secure ordering function.
+   Then, in a new query, paste and **Run** `supabase/migrations/20261012120000_merge_unpaid_orders.sql`.
+   This makes new checkouts add to an existing unpaid order.
+2. **Optional test products:** paste and run `supabase/snippets/test_products.sql`. It adds seven
+   sample items (marked `[TEST]` in their description) with opening stock, so the shop has
+   something to show. To hide them later, run:
+   `update public.products set is_active = false where description like '[TEST]%';`
+3. **Optional photos:** **Storage → product-images → Upload file**, for example `cakes/black-forest.jpg`.
+   Then in **Table Editor → products**, set that product's `image_path` to the same path
+   (`cakes/black-forest.jpg`). Products without a photo show their category icon. The admin
+   screens in Stage 5 will do this from the app.
+
+How ordering works:
+- The app sends only product IDs and quantities. The server looks up the current prices, checks
+  each item is on sale and in stock, and works out the total itself.
+- New orders are **awaiting payment**. Stock is **not** reduced yet. It's reduced only when a
+  payment is verified by the server (Stage 4).
+- **One unpaid order per customer:** while an order is awaiting payment, a new checkout adds its
+  items to that order. The server re-checks stock for the combined amounts and uses today's prices.
+  Once a payment has been started for an order, it is never changed; a new checkout then starts a
+  new order.
+- Customers can cancel their own unpaid orders.
+- Admin and reports accounts can't place orders, so staff accounts stay clean.
+
 ## How the security works (plain language)
 
 - **Row Level Security (RLS)** is a filter the database applies to every request. Even if someone
@@ -103,5 +130,4 @@ limits what it can do.
   server code with secret keys can do that (Stage 4).
 - Stock can never go below zero.
 
-These rules are checked by 41 automated tests in `supabase/tests/database/security.test.sql`
-(run with `supabase test db`).
+These rules are checked by 79 automated tests in `supabase/tests/database/` (run with `supabase test db`).

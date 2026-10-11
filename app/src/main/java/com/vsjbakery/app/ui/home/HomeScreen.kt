@@ -14,35 +14,45 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vsjbakery.app.domain.model.Catalog
 import com.vsjbakery.app.domain.model.Category
-import com.vsjbakery.app.domain.model.StarterCategories
+import com.vsjbakery.app.domain.model.Product
+import com.vsjbakery.app.ui.components.EmptyState
 import com.vsjbakery.app.ui.components.SectionHeader
 import com.vsjbakery.app.ui.components.categoryIcon
+import com.vsjbakery.app.ui.shop.CatalogState
+import com.vsjbakery.app.ui.shop.ProductCard
 import com.vsjbakery.app.ui.theme.Brown700
 import com.vsjbakery.app.ui.theme.Brown900
 import com.vsjbakery.app.ui.theme.Cream100
@@ -52,9 +62,14 @@ import com.vsjbakery.app.ui.theme.VsjBakeryTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    catalogState: CatalogState,
+    isRefreshing: Boolean,
+    cartQuantities: Map<String, Int>,
+    onRefresh: () -> Unit,
     onCategoryClick: (Category) -> Unit,
+    onAdd: (Product) -> Unit,
+    onDecrement: (Product) -> Unit,
     modifier: Modifier = Modifier,
-    categories: List<Category> = StarterCategories.all,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         CenterAlignedTopAppBar(
@@ -70,41 +85,106 @@ fun HomeScreen(
                 titleContentColor = MaterialTheme.colorScheme.primary,
             ),
         )
-        LazyColumn(
-            contentPadding = PaddingValues(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize(),
         ) {
-            item { HeroBanner(modifier = Modifier.padding(horizontal = 16.dp)) }
-            item { PickupInfoRow(modifier = Modifier.padding(horizontal = 16.dp)) }
-            item {
-                SectionHeader(
-                    title = "Shop by category",
-                    subtitle = "Freshly prepared every day at our counter",
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-            // Two cards per row. A plain list of rows keeps everything in one scrollable column.
-            items(categories.chunked(2)) { row ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    row.forEach { category ->
-                        CategoryCard(
-                            category = category,
-                            onClick = { onCategoryClick(category) },
-                            modifier = Modifier.weight(1f),
+            LazyColumn(
+                contentPadding = PaddingValues(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                item { HeroBanner(modifier = Modifier.padding(horizontal = 16.dp)) }
+                item { PickupInfoRow(modifier = Modifier.padding(horizontal = 16.dp)) }
+                when (catalogState) {
+                    CatalogState.Loading -> item {
+                        Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is CatalogState.Error -> item {
+                        EmptyState(
+                            icon = Icons.Outlined.CloudOff,
+                            title = "Couldn't load the menu",
+                            message = catalogState.message,
+                            action = { Button(onClick = onRefresh) { Text("Try again") } },
                         )
                     }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                    is CatalogState.Ready -> catalogContent(
+                        catalog = catalogState.catalog,
+                        cartQuantities = cartQuantities,
+                        onCategoryClick = onCategoryClick,
+                        onAdd = onAdd,
+                        onDecrement = onDecrement,
+                    )
                 }
             }
-            item {
-                SectionHeader(title = "Today's menu", modifier = Modifier.padding(top = 8.dp))
+        }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.catalogContent(
+    catalog: Catalog,
+    cartQuantities: Map<String, Int>,
+    onCategoryClick: (Category) -> Unit,
+    onAdd: (Product) -> Unit,
+    onDecrement: (Product) -> Unit,
+) {
+    item {
+        SectionHeader(
+            title = "Shop by category",
+            subtitle = "Freshly prepared every day at our counter",
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+    // Two cards per row. A plain list of rows keeps everything in one scrollable column.
+    items(catalog.categories.chunked(2)) { row ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            row.forEach { category ->
+                CategoryCard(
+                    category = category,
+                    productCount = catalog.productsIn(category.id).size,
+                    onClick = { onCategoryClick(category) },
+                    modifier = Modifier.weight(1f),
+                )
             }
-            item { MenuComingSoonCard(modifier = Modifier.padding(horizontal = 16.dp)) }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+    item {
+        SectionHeader(
+            title = "Fresh today",
+            subtitle = "Available now for pickup",
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+    val available = catalog.products.filter { it.isAvailable }
+    if (available.isEmpty()) {
+        item { MenuEmptyCard(modifier = Modifier.padding(horizontal = 16.dp)) }
+    } else {
+        item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(available, key = { it.id }) { product ->
+                    val slug = catalog.category(product.categoryId)?.slug.orEmpty()
+                    ProductCard(
+                        product = product,
+                        fallbackIcon = categoryIcon(slug),
+                        quantityInCart = cartQuantities[product.id] ?: 0,
+                        onAdd = { onAdd(product) },
+                        onDecrement = { onDecrement(product) },
+                        modifier = Modifier.width(176.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -146,25 +226,13 @@ private fun PickupInfoRow(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        InfoChip(
-            icon = Icons.Filled.Storefront,
-            label = "Bakery pickup only",
-            modifier = Modifier.weight(1f),
-        )
-        InfoChip(
-            icon = Icons.Filled.AccessTime,
-            label = "Order ahead, skip the queue",
-            modifier = Modifier.weight(1f),
-        )
+        InfoChip(Icons.Filled.Storefront, "Bakery pickup only", Modifier.weight(1f))
+        InfoChip(Icons.Filled.AccessTime, "Order ahead, skip the queue", Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun InfoChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-) {
+private fun InfoChip(icon: ImageVector, label: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
@@ -195,6 +263,7 @@ private fun InfoChip(
 @Composable
 private fun CategoryCard(
     category: Category,
+    productCount: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -210,17 +279,27 @@ private fun CategoryCard(
                 .padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(44.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = categoryIcon(category.slug),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(24.dp),
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = categoryIcon(category.slug),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                if (productCount > 0) {
+                    Text(
+                        text = "$productCount item${if (productCount == 1) "" else "s"}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -229,6 +308,8 @@ private fun CategoryCard(
                     text = category.name,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = category.tagline,
@@ -243,27 +324,19 @@ private fun CategoryCard(
 }
 
 @Composable
-private fun MenuComingSoonCard(modifier: Modifier = Modifier) {
+private fun MenuEmptyCard(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.tertiary,
-            )
+            Icon(Icons.Outlined.Info, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
             Spacer(Modifier.width(12.dp))
             Column {
-                Text(
-                    text = "Our online menu is being prepared",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                Text("Nothing ready right now", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Products, prices and availability will appear here as soon as the bakery publishes them.",
+                    text = "Fresh batches are added through the day. Pull down to refresh.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -272,12 +345,29 @@ private fun MenuComingSoonCard(modifier: Modifier = Modifier) {
     }
 }
 
-@Preview(showBackground = true, heightDp = 900)
+@Preview(showBackground = true, heightDp = 1000)
 @Composable
 private fun HomeScreenPreview() {
+    val categories = listOf(
+        Category("1", "cakes", "Cakes", "Celebration & tea-time cakes"),
+        Category("2", "breads", "Breads", "Baked fresh every morning"),
+        Category("3", "beverages", "Beverages", "Tea, coffee & coolers"),
+    )
+    val products = listOf(
+        Product("p1", "1", "Black Forest Cake", "", 45000, null, 4),
+        Product("p2", "2", "Milk Bread", "", 4500, null, 12),
+    )
     VsjBakeryTheme(darkTheme = false) {
         Surface(color = MaterialTheme.colorScheme.background) {
-            HomeScreen(onCategoryClick = {})
+            HomeScreen(
+                catalogState = CatalogState.Ready(Catalog(categories, products)),
+                isRefreshing = false,
+                cartQuantities = mapOf("p2" to 2),
+                onRefresh = {},
+                onCategoryClick = {},
+                onAdd = {},
+                onDecrement = {},
+            )
         }
     }
 }

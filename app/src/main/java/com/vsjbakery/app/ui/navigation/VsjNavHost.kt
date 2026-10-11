@@ -15,8 +15,12 @@ import com.vsjbakery.app.ui.account.SignInScreen
 import com.vsjbakery.app.ui.account.SignUpScreen
 import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.cart.CartScreen
+import com.vsjbakery.app.ui.cart.OrderPlacedScreen
 import com.vsjbakery.app.ui.category.CategoryScreen
 import com.vsjbakery.app.ui.home.HomeScreen
+import com.vsjbakery.app.ui.orders.MyOrdersScreen
+import com.vsjbakery.app.ui.orders.OrdersViewModel
+import com.vsjbakery.app.ui.shop.ShopViewModel
 import com.vsjbakery.app.ui.staff.AdminHomeScreen
 import com.vsjbakery.app.ui.staff.ReportsHomeScreen
 
@@ -24,22 +28,36 @@ import com.vsjbakery.app.ui.staff.ReportsHomeScreen
 fun VsjNavHost(
     navController: NavHostController,
     authViewModel: AuthViewModel,
+    shopViewModel: ShopViewModel,
+    ordersViewModel: OrdersViewModel,
     modifier: Modifier = Modifier,
 ) {
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val form by authViewModel.form.collectAsStateWithLifecycle()
+    val catalog by shopViewModel.catalog.collectAsStateWithLifecycle()
+    val isRefreshing by shopViewModel.isRefreshing.collectAsStateWithLifecycle()
+    val cartQuantities by shopViewModel.cartQuantities.collectAsStateWithLifecycle()
+    val cartState by shopViewModel.cartState.collectAsStateWithLifecycle()
+    val checkout by shopViewModel.checkout.collectAsStateWithLifecycle()
+    val ordersState by ordersViewModel.state.collectAsStateWithLifecycle()
 
-    // After signing in, staff go straight to their dashboard; customers return to Account.
+    // After signing in, staff go straight to their dashboard. Customers go back to where
+    // they came from (for example the cart, to finish ordering).
     val onSignedIn: (AppRole) -> Unit = { role ->
         authViewModel.onCompletionHandled()
-        val destination: Any = when (role) {
-            AppRole.ADMIN -> AdminHomeRoute
-            AppRole.REPORTS -> ReportsHomeRoute
-            AppRole.CUSTOMER -> AccountRoute
-        }
-        navController.navigate(destination) {
-            popUpTo<AccountRoute> { inclusive = destination == AccountRoute }
-            launchSingleTop = true
+        when (role) {
+            AppRole.ADMIN -> navController.navigate(AdminHomeRoute) {
+                popUpTo<AccountRoute>()
+                launchSingleTop = true
+            }
+            AppRole.REPORTS -> navController.navigate(ReportsHomeRoute) {
+                popUpTo<AccountRoute>()
+                launchSingleTop = true
+            }
+            AppRole.CUSTOMER -> {
+                navController.popBackStack<SignInRoute>(inclusive = true)
+                navController.popBackStack<SignUpRoute>(inclusive = true)
+            }
         }
     }
 
@@ -50,21 +68,74 @@ fun VsjNavHost(
     ) {
         composable<HomeRoute> {
             HomeScreen(
+                catalogState = catalog,
+                isRefreshing = isRefreshing,
+                cartQuantities = cartQuantities,
+                onRefresh = shopViewModel::refresh,
                 onCategoryClick = { category ->
-                    navController.navigate(CategoryRoute(slug = category.slug, name = category.name))
+                    navController.navigate(CategoryRoute(id = category.id, slug = category.slug, name = category.name))
                 },
+                onAdd = shopViewModel::addToCart,
+                onDecrement = { shopViewModel.decrease(it.id) },
             )
         }
         composable<CategoryRoute> { entry ->
             val route = entry.toRoute<CategoryRoute>()
             CategoryScreen(
+                categoryId = route.id,
                 slug = route.slug,
                 name = route.name,
+                catalogState = catalog,
+                isRefreshing = isRefreshing,
+                cartQuantities = cartQuantities,
+                cartState = cartState,
+                onRefresh = shopViewModel::refresh,
+                onAdd = shopViewModel::addToCart,
+                onDecrement = { shopViewModel.decrease(it.id) },
+                onOpenCart = { navController.navigateToTopLevel(CartRoute) },
                 onBack = { navController.popBackStack() },
             )
         }
         composable<CartRoute> {
-            CartScreen(onBrowseMenu = { navController.navigateToTopLevel(HomeRoute) })
+            CartScreen(
+                cart = cartState,
+                checkout = checkout,
+                authState = authState,
+                onIncrement = { line -> line.product?.let(shopViewModel::addToCart) },
+                onDecrement = { line -> shopViewModel.decrease(line.productId) },
+                onRemove = { line -> shopViewModel.remove(line.productId) },
+                onFixLine = shopViewModel::fixLine,
+                onPlaceOrder = shopViewModel::placeOrder,
+                onOrderPlaced = { placed ->
+                    shopViewModel.onOrderPlacedHandled()
+                    navController.navigate(OrderPlacedRoute(placed.orderNumber, placed.totalPaise, placed.addedToExisting))
+                },
+                onDismissError = shopViewModel::dismissCheckoutError,
+                onSignIn = { navController.navigate(SignInRoute(AppRole.CUSTOMER)) },
+                onBrowseMenu = { navController.navigateToTopLevel(HomeRoute) },
+            )
+        }
+        composable<OrderPlacedRoute> { entry ->
+            val route = entry.toRoute<OrderPlacedRoute>()
+            OrderPlacedScreen(
+                orderNumber = route.orderNumber,
+                totalPaise = route.totalPaise,
+                addedToExisting = route.addedToExisting,
+                onViewOrders = {
+                    navController.navigate(MyOrdersRoute) {
+                        popUpTo<OrderPlacedRoute> { inclusive = true }
+                    }
+                },
+                onContinueShopping = { navController.navigateToTopLevel(HomeRoute) },
+            )
+        }
+        composable<MyOrdersRoute> {
+            MyOrdersScreen(
+                state = ordersState,
+                onLoad = ordersViewModel::load,
+                onCancel = ordersViewModel::cancel,
+                onBack = { navController.popBackStack() },
+            )
         }
         composable<AccountRoute> {
             AccountScreen(
@@ -72,6 +143,7 @@ fun VsjNavHost(
                 onSignIn = { role -> navController.navigate(SignInRoute(role)) },
                 onOpenAdmin = { navController.navigate(AdminHomeRoute) },
                 onOpenReports = { navController.navigate(ReportsHomeRoute) },
+                onOpenOrders = { navController.navigate(MyOrdersRoute) },
                 onRetryProfile = authViewModel::retryProfile,
                 onSignOut = authViewModel::signOut,
             )

@@ -29,11 +29,21 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Admin and reports accounts created; customer, admin and reports sign-in confirmed on the emulator
 - ⬜ Password reset by email (planned with the confirmation landing page)
 
-## Stage 3 — Catalogue & cart ⬜
-- ⬜ Products by category with photo, name, price, availability
-- ⬜ Cart: add, change quantity, remove, total
-- ⬜ Place pickup order (prices recalculated on the server)
-- ⬜ Customer order history and status
+## Stage 3 — Catalogue & cart 🟡 (code done — apply migration, then test on the emulator)
+- ✅ Products by category from Supabase: photo (or category icon), name, price, availability ("In stock" / "Only 3 left" / "Sold out")
+- ✅ Home: live categories with item counts, "Fresh today" row, pull-to-refresh
+- ✅ Cart: add, change quantity (capped at stock), remove, total, cart badge on the bottom bar
+- ✅ Cart flags items that sold out or dropped below the cart quantity, with one-tap fix
+- ✅ Place pickup order: server-side `place_order` recalculates prices and total, checks stock; app sends ids + quantities only
+- ✅ Orders start as "Awaiting payment"; stock is not touched until payment is verified (Stage 4)
+- ✅ My orders (customer): list with items, total, status; cancel unpaid orders
+- ✅ One unpaid order per customer: new checkouts are added to it (stock re-checked, current prices); orders with a payment in progress are never changed
+- ✅ Staff accounts cannot place orders
+- ✅ 38 ordering tests + 41 security tests (79 database tests) + cart/order unit tests
+- ✅ `20261012090000_place_order.sql` applied; ordering confirmed on the emulator
+- ⬜ **You:** run `20261012120000_merge_unpaid_orders.sql` in the SQL editor (`docs/SUPABASE_SETUP.md` step 6)
+- ⬜ **You:** optionally run `supabase/snippets/test_products.sql` and upload a few photos
+- ⬜ Cart is kept in memory only (cleared if Android closes the app) — persistence can be added later
 
 ## Stage 4 — Payments (test mode) ⬜
 - ⬜ Gateway account in test mode; secret key stored only in Supabase secrets

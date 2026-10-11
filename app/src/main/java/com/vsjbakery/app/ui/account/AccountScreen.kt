@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Person
@@ -54,6 +55,7 @@ fun AccountScreen(
     onSignIn: (AppRole) -> Unit,
     onOpenAdmin: () -> Unit,
     onOpenReports: () -> Unit,
+    onOpenOrders: () -> Unit,
     onRetryProfile: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -74,6 +76,7 @@ fun AccountScreen(
                 profile = authState.profile,
                 onOpenAdmin = onOpenAdmin,
                 onOpenReports = onOpenReports,
+                onOpenOrders = onOpenOrders,
                 onSignOut = onSignOut,
             )
             is AuthState.ProfileUnavailable -> EmptyState(
@@ -130,6 +133,7 @@ private fun SignedInContent(
     profile: UserProfile,
     onOpenAdmin: () -> Unit,
     onOpenReports: () -> Unit,
+    onOpenOrders: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     LazyColumn(
@@ -153,10 +157,11 @@ private fun SignedInContent(
                 }
             }
             AppRole.CUSTOMER -> item {
-                MessageCard(
-                    icon = Icons.Outlined.Info,
-                    message = "Your orders will appear here once online ordering opens.",
-                )
+                Button(onClick = onOpenOrders, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("My orders")
+                }
             }
         }
         item {
