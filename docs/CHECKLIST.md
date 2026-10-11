@@ -45,7 +45,7 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Test products added
 - ⬜ Cart is kept in memory only (cleared if Android closes the app) — persistence can be added later
 
-## Stage 4 — Payments (test mode) 🟡 (code done — follow `docs/PAYMENTS_SETUP.md`)
+## Stage 4 — Payments (test mode) ✅
 - ✅ Razorpay chosen; Key ID and Key Secret kept in Supabase Edge Function secrets (never in the app or Git)
 - ✅ Server creates the Razorpay order for the order total stored in the database
 - ✅ App opens Razorpay Checkout (UPI, cards, wallets) from **Pay** on unpaid orders and after checkout
@@ -55,8 +55,12 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Cancelled / already-paid / sold-out-at-payment orders are refunded automatically
 - ✅ Payment functions callable only by the server (service role); 31 new database tests (110 total)
 - ✅ Edge Function unit tests (signatures, capture, refunds) in CI; one-click deploy workflow
-- ⬜ **You:** run `20261013090000_payments.sql`, add Razorpay test keys as Supabase secrets, deploy functions, add webhook
-- ⬜ **You:** test payment with `success@razorpay` on the emulator
+- ✅ Safety net: before paying and after a phone-side error, the server asks Razorpay whether the order was already paid (never charges twice)
+- ✅ Server role has read-only table access (newer Supabase projects don't grant it automatically)
+- ✅ Migrations applied, keys stored as Supabase secrets, functions deployed
+- ✅ Test payment confirmed on the emulator: payment captured, order paid, stock reduced by the server
+- ⬜ Confirm the Razorpay webhook deliveries succeed (Razorpay → Webhooks → delivery list)
+- ⬜ UPI option: enable in Razorpay → Payment methods, and test on a real phone with a UPI app
 
 ## Stage 5 — Administrator ⬜
 - ⬜ Add / edit products, categories, prices, photos
