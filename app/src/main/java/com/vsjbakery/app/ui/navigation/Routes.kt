@@ -16,7 +16,7 @@ data object CartRoute
 data object AccountRoute
 
 @Serializable
-data class CategoryRoute(val slug: String, val name: String)
+data class CategoryRoute(val id: String, val slug: String, val name: String)
 
 @Serializable
 data class SignInRoute(val role: AppRole)
@@ -29,3 +29,9 @@ data object AdminHomeRoute
 
 @Serializable
 data object ReportsHomeRoute
+
+@Serializable
+data class OrderPlacedRoute(val orderNumber: Long, val totalPaise: Long)
+
+@Serializable
+data object MyOrdersRoute

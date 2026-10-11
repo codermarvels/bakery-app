@@ -20,7 +20,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Tune
@@ -50,7 +50,7 @@ private val adminTools = listOf(
     StaffTool(Icons.Filled.Inventory, "Record production", "Add freshly prepared stock"),
     StaffTool(Icons.Filled.Tune, "Adjust stock", "Correct stock counts with a reason"),
     StaffTool(Icons.Filled.DeleteSweep, "Record wastage", "Log spoiled or discarded items"),
-    StaffTool(Icons.Filled.ReceiptLong, "Orders", "View paid orders and mark them ready or collected"),
+    StaffTool(Icons.AutoMirrored.Filled.ReceiptLong, "Orders", "View paid orders and mark them ready or collected"),
 )
 
 private val reportTools = listOf(

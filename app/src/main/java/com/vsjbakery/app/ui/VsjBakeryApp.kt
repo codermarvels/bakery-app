@@ -9,6 +9,8 @@ import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -20,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -27,6 +30,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vsjbakery.app.ui.auth.AuthViewModel
+import com.vsjbakery.app.ui.orders.OrdersViewModel
+import com.vsjbakery.app.ui.shop.ShopViewModel
 import com.vsjbakery.app.ui.navigation.AccountRoute
 import com.vsjbakery.app.ui.navigation.CartRoute
 import com.vsjbakery.app.ui.navigation.HomeRoute
@@ -56,7 +61,10 @@ private fun NavDestination?.isOn(routeClass: KClass<*>): Boolean =
 fun VsjBakeryApp() {
     val navController = rememberNavController()
     // One AuthViewModel for the whole app, so every screen sees the same sign-in state.
-    val authViewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)
+    val authViewModel: AuthViewModel = viewModel(factory = AppViewModelFactory)
+    val shopViewModel: ShopViewModel = viewModel(factory = AppViewModelFactory)
+    val ordersViewModel: OrdersViewModel = viewModel(factory = AppViewModelFactory)
+    val cartState by shopViewModel.cartState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
     // The bottom bar only shows on the three main tabs, not on detail screens.
@@ -75,10 +83,13 @@ fun VsjBakeryApp() {
                             selected = selected,
                             onClick = { navController.navigateToTopLevel(tab.route) },
                             icon = {
-                                Icon(
-                                    imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                                    contentDescription = null,
-                                )
+                                val count = if (tab.route == CartRoute) cartState.itemCount else 0
+                                BadgedBox(badge = { if (count > 0) Badge { Text(count.toString()) } }) {
+                                    Icon(
+                                        imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
+                                        contentDescription = null,
+                                    )
+                                }
                             },
                             label = { Text(tab.label) },
                             colors = NavigationBarItemDefaults.colors(
@@ -93,6 +104,8 @@ fun VsjBakeryApp() {
         VsjNavHost(
             navController = navController,
             authViewModel = authViewModel,
+            shopViewModel = shopViewModel,
+            ordersViewModel = ordersViewModel,
             modifier = Modifier.padding(innerPadding),
         )
     }
