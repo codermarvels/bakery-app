@@ -49,6 +49,16 @@ jobs:
       - name: Build debug APK
         run: ./gradlew --no-daemon assembleDebug
 
+      - name: Show which Supabase project the APK uses
+        run: |
+          CONFIG=app/build/generated/source/buildConfig/debug/com/vsjbakery/app/BuildConfig.java
+          grep 'SUPABASE_URL' "$CONFIG"
+          if grep -q 'SUPABASE_URL = "https://' "$CONFIG" && grep -q 'SUPABASE_PUBLISHABLE_KEY = "sb_publishable_' "$CONFIG"; then
+            echo "Sign-in is configured in this APK."
+          else
+            echo "::warning title=Sign-in disabled in this APK::No Supabase URL / publishable key was found at build time."
+          fi
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
