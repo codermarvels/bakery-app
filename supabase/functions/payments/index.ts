@@ -26,15 +26,35 @@ import {
   settleRazorpayOrder,
 } from "../_shared/razorpay.ts";
 
+/** Server-side database client (service role; bypasses Row Level Security, so check ownership). */
+function createAdminClient() {
+  return createClient(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+/** True when the order exists and belongs to this customer. */
+async function ownsOrder(admin: AdminClient, orderId: string, customerId: string): Promise<boolean> {
+  if (!orderId) return false;
+  const { data, error } = await admin
+    .from("orders")
+    .select("id")
+    .eq("id", orderId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+  if (error) console.error("ownsOrder: could not read order", error);
+  return !!data;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
 
   try {
     const keyId = requireEnv("RAZORPAY_KEY_ID");
     const keySecret = requireEnv("RAZORPAY_KEY_SECRET");
-    const admin = createClient(requireEnv("SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"), {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const admin = createAdminClient();
 
     // Who is calling? The token is validated by Supabase Auth, not trusted blindly.
     const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
@@ -51,7 +71,10 @@ Deno.serve(async (req) => {
         p_order_id: orderId,
         p_customer_id: user.id,
       });
-      if (error) return json({ ok: false, error: error.message });
+      if (error) {
+        console.error("create: prepare_payment refused", error);
+        return json({ ok: false, error: error.message });
+      }
 
       let razorpayOrderId: string | null = prep.reusable_provider_order_id;
       if (!razorpayOrderId) {
@@ -82,15 +105,21 @@ Deno.serve(async (req) => {
 
     if (body.action === "sync") {
       const orderId = String(body.order_id ?? "");
-      // Only this customer's own order, and only attempts not already confirmed.
+      // Only this customer's own order (checked first, as its own simple query).
+      if (!(await ownsOrder(admin, orderId, user.id))) {
+        return json({ ok: false, error: "Order not found for this account." });
+      }
+      // Its payment attempts that are not confirmed yet.
       const { data: attempts, error } = await admin
         .from("payments")
-        .select("provider_order_id, orders!inner(customer_id)")
+        .select("provider_order_id")
         .eq("order_id", orderId)
-        .eq("orders.customer_id", user.id)
         .eq("provider", "razorpay")
         .neq("status", "captured");
-      if (error) return json({ ok: false, error: "Could not check the payment." });
+      if (error) {
+        console.error("sync: could not read payment attempts", error);
+        return json({ ok: false, error: "Could not check the payment." });
+      }
 
       for (const attempt of attempts ?? []) {
         if (!attempt.provider_order_id) continue;
@@ -110,13 +139,15 @@ Deno.serve(async (req) => {
       }
 
       // The payment must be for one of this customer's orders.
-      const { data: owned } = await admin
+      const { data: attempt, error: attemptError } = await admin
         .from("payments")
-        .select("id, orders!inner(customer_id)")
+        .select("order_id")
         .eq("provider_order_id", razorpayOrderId)
-        .eq("orders.customer_id", user.id)
         .maybeSingle();
-      if (!owned) return json({ ok: false, error: "Payment not found for this account." });
+      if (attemptError) console.error("verify: could not read payment attempt", attemptError);
+      if (!attempt || !(await ownsOrder(admin, attempt.order_id, user.id))) {
+        return json({ ok: false, error: "Payment not found for this account." });
+      }
 
       const result = await settlePayment(gateway, admin, razorpayOrderId, razorpayPaymentId);
       return json({ ok: true, ...result });
