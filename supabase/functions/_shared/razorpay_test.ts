@@ -7,6 +7,7 @@ import {
   type RazorpayPayment,
   type Rpc,
   settlePayment,
+  settleRazorpayOrder,
   timingSafeEqual,
 } from "./razorpay.ts";
 
@@ -49,8 +50,12 @@ class FakeGateway implements PaymentGateway {
   createOrder() {
     return Promise.resolve({ id: "order_new" });
   }
+  attempts: RazorpayPayment[] = [];
   fetchPayment() {
     return Promise.resolve({ ...this.payment });
+  }
+  listOrderPayments() {
+    return Promise.resolve(this.attempts);
   }
   capturePayment() {
     this.captured++;
@@ -137,4 +142,23 @@ Deno.test("a refund that fails is recorded as failed for follow-up", async () =>
   const result = await settlePayment(gateway, db, "order_1", "pay_1");
   assertEquals(result.refund_status, "failed");
   assertEquals(db.calls[1].args.p_succeeded, false);
+});
+
+Deno.test("order check finds a captured attempt among failed ones and settles it", async () => {
+  const gateway = new FakeGateway(capturedPayment);
+  gateway.attempts = [{ ...capturedPayment, id: "pay_0", status: "failed" }, capturedPayment];
+  const db = new FakeDb({ result: "paid", order_number: 7 });
+  const result = await settlePayment(gateway, db, "order_1", "pay_1");
+  assertEquals(result.result, "paid");
+  const viaOrder = await settleRazorpayOrder(gateway, new FakeDb({ result: "paid" }), "order_1");
+  assertEquals(viaOrder.result, "paid");
+});
+
+Deno.test("order check with no successful attempt changes nothing", async () => {
+  const gateway = new FakeGateway(capturedPayment);
+  gateway.attempts = [{ ...capturedPayment, status: "failed" }];
+  const db = new FakeDb({ result: "paid" });
+  const result = await settleRazorpayOrder(gateway, db, "order_1");
+  assertEquals(result.result, "not_captured");
+  assertEquals(db.calls.length, 0);
 });

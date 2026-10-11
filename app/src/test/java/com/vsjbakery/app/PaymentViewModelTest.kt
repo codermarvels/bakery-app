@@ -28,8 +28,17 @@ private class FakePaymentRepository : PaymentRepository {
     var verifyResult: PaymentOutcome = PaymentOutcome.Paid(12)
     var verifyError: Exception? = null
     val verified = mutableListOf<Triple<String, String, String>>()
+    var syncResult: PaymentOutcome? = null
+    var syncCalls = 0
+    var startCalls = 0
+
+    override suspend fun syncPayment(orderId: String): PaymentOutcome? {
+        syncCalls++
+        return syncResult
+    }
 
     override suspend fun startPayment(orderId: String): PaymentSession {
+        startCalls++
         startError?.let { throw it }
         return PaymentSession("rzp_test_key", "order_R1", 57500, 12, "asha@test.local")
     }
@@ -110,6 +119,33 @@ class PaymentViewModelTest {
         assertEquals(PaymentState.Failed("Plum Cake is sold out"), vm.state.value)
         vm.dismiss()
         assertEquals(PaymentState.Idle, vm.state.value)
+    }
+
+    @Test
+    fun alreadyPaidOrderIsNotChargedAgain() = runTest {
+        val repo = FakePaymentRepository().apply { syncResult = PaymentOutcome.Paid(12) }
+        val vm = PaymentViewModel(repo, CheckoutResults())
+        vm.pay("order-uuid")
+        assertEquals(PaymentState.Finished(PaymentOutcome.Paid(12), 12), vm.state.value)
+        assertEquals(0, repo.startCalls)
+    }
+
+    @Test
+    fun phoneErrorButMoneyCapturedEndsAsPaid() = runTest {
+        val (repo, results, vm) = openCheckout()
+        repo.syncResult = PaymentOutcome.Paid(12)
+        results.report(CheckoutResult.Failed(cancelledByUser = false, description = "Payment failed"))
+        assertEquals(PaymentState.Finished(PaymentOutcome.Paid(12), 12), vm.state.value)
+    }
+
+    @Test
+    fun phoneErrorWithNothingCapturedShowsFailureWithReason() = runTest {
+        val (repo, results, vm) = openCheckout()
+        results.report(CheckoutResult.Failed(cancelledByUser = false, description = "Payment failed, code 2"))
+        val state = vm.state.value
+        assertTrue(state is PaymentState.Failed)
+        assertTrue((state as PaymentState.Failed).message.contains("Payment failed, code 2"))
+        assertEquals(2, repo.syncCalls) // once before paying, once after the error
     }
 
     @Test

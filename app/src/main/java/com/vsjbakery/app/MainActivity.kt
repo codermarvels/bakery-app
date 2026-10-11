@@ -10,6 +10,7 @@ import com.razorpay.PaymentResultWithDataListener
 import com.vsjbakery.app.data.payments.CheckoutResult
 import com.vsjbakery.app.ui.VsjBakeryApp
 import com.vsjbakery.app.ui.theme.VsjBakeryTheme
+import org.json.JSONObject
 
 /**
  * The app's only screen container. Razorpay Checkout reports its result to the Activity
@@ -43,7 +44,22 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
 
     override fun onPaymentError(code: Int, response: String?, data: PaymentData?) {
         checkoutResults.report(
-            CheckoutResult.Failed(cancelledByUser = code == Checkout.PAYMENT_CANCELED, description = null),
+            CheckoutResult.Failed(
+                cancelledByUser = code == Checkout.PAYMENT_CANCELED,
+                description = describeCheckoutError(code, response),
+            ),
         )
     }
+}
+
+/**
+ * Razorpay sends error details as JSON, e.g.
+ * {"error":{"code":"BAD_REQUEST_ERROR","description":"Payment failed","reason":"payment_failed"}}.
+ * Shown to the customer so problems can be understood and reported.
+ */
+internal fun describeCheckoutError(code: Int, response: String?): String {
+    val error = runCatching { JSONObject(response.orEmpty()).optJSONObject("error") }.getOrNull()
+    val description = error?.optString("description")?.takeIf { it.isNotBlank() && it != "null" }
+    val reason = error?.optString("reason")?.takeIf { it.isNotBlank() && it != "null" }
+    return listOfNotNull(description, reason?.let { "reason: $it" }, "code $code").joinToString(", ")
 }

@@ -4,6 +4,10 @@
 //     → creates (or reuses) a Razorpay order for the order's total as stored on the server
 //       and returns what the app needs to open Razorpay Checkout.
 //
+//   POST { "action": "sync", "order_id": "<uuid>" }
+//     → asks Razorpay whether any payment attempt for this order was already paid and, if
+//       so, confirms it. Used before paying again and when the phone reported an error.
+//
 //   POST { "action": "verify", "razorpay_order_id", "razorpay_payment_id", "razorpay_signature" }
 //     → checks the signature, asks Razorpay whether the money was captured, and only then
 //       marks the order paid (and reduces stock) in the database.
@@ -19,6 +23,7 @@ import {
   RazorpayApi,
   requireEnv,
   settlePayment,
+  settleRazorpayOrder,
 } from "../_shared/razorpay.ts";
 
 Deno.serve(async (req) => {
@@ -73,6 +78,26 @@ Deno.serve(async (req) => {
         order_number: prep.order_number,
         customer_email: user.email ?? null,
       });
+    }
+
+    if (body.action === "sync") {
+      const orderId = String(body.order_id ?? "");
+      // Only this customer's own order, and only attempts not already confirmed.
+      const { data: attempts, error } = await admin
+        .from("payments")
+        .select("provider_order_id, orders!inner(customer_id)")
+        .eq("order_id", orderId)
+        .eq("orders.customer_id", user.id)
+        .eq("provider", "razorpay")
+        .neq("status", "captured");
+      if (error) return json({ ok: false, error: "Could not check the payment." });
+
+      for (const attempt of attempts ?? []) {
+        if (!attempt.provider_order_id) continue;
+        const result = await settleRazorpayOrder(gateway, admin, attempt.provider_order_id);
+        if (result.result !== "not_captured") return json({ ok: true, ...result });
+      }
+      return json({ ok: true, result: "not_captured" });
     }
 
     if (body.action === "verify") {
