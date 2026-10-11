@@ -1,0 +1,26 @@
+# Gradle / build output
+.gradle/
+build/
+**/build/
+.kotlin/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local machine configuration — never commit
+local.properties
+
+# Secrets — never commit
+*.jks
+*.keystore
+secrets.properties
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
