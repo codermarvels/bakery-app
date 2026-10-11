@@ -29,7 +29,7 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Admin and reports accounts created; customer, admin and reports sign-in confirmed on the emulator
 - ⬜ Password reset by email (planned with the confirmation landing page)
 
-## Stage 3 — Catalogue & cart 🟡 (code done — apply migration, then test on the emulator)
+## Stage 3 — Catalogue & cart ✅
 - ✅ Products by category from Supabase: photo (or category icon), name, price, availability ("In stock" / "Only 3 left" / "Sold out")
 - ✅ Home: live categories with item counts, "Fresh today" row, pull-to-refresh
 - ✅ Cart: add, change quantity (capped at stock), remove, total, cart badge on the bottom bar
@@ -41,16 +41,22 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Staff accounts cannot place orders
 - ✅ 38 ordering tests + 41 security tests (79 database tests) + cart/order unit tests
 - ✅ `20261012090000_place_order.sql` applied; ordering confirmed on the emulator
-- ⬜ **You:** run `20261012120000_merge_unpaid_orders.sql` in the SQL editor (`docs/SUPABASE_SETUP.md` step 6)
-- ⬜ **You:** optionally run `supabase/snippets/test_products.sql` and upload a few photos
+- ✅ Merge-into-unpaid-order applied and confirmed on the emulator
+- ✅ Test products added
 - ⬜ Cart is kept in memory only (cleared if Android closes the app) — persistence can be added later
 
-## Stage 4 — Payments (test mode) ⬜
-- ⬜ Gateway account in test mode; secret key stored only in Supabase secrets
-- ⬜ Server creates gateway order for the server-calculated amount
-- ⬜ App checkout (UPI and other methods)
-- ⬜ Server verifies payment signature + webhook; only then marks order paid
-- ⬜ Stock deducted atomically when the order becomes paid
+## Stage 4 — Payments (test mode) 🟡 (code done — follow `docs/PAYMENTS_SETUP.md`)
+- ✅ Razorpay chosen; Key ID and Key Secret kept in Supabase Edge Function secrets (never in the app or Git)
+- ✅ Server creates the Razorpay order for the order total stored in the database
+- ✅ App opens Razorpay Checkout (UPI, cards, wallets) from **Pay** on unpaid orders and after checkout
+- ✅ Server verifies the checkout signature AND asks Razorpay that the money was captured
+- ✅ Only then: payment captured + order paid + stock reduced, in one database transaction (safe to repeat)
+- ✅ Webhook (signature-checked) confirms payments even if the app closes mid-payment
+- ✅ Cancelled / already-paid / sold-out-at-payment orders are refunded automatically
+- ✅ Payment functions callable only by the server (service role); 31 new database tests (110 total)
+- ✅ Edge Function unit tests (signatures, capture, refunds) in CI; one-click deploy workflow
+- ⬜ **You:** run `20261013090000_payments.sql`, add Razorpay test keys as Supabase secrets, deploy functions, add webhook
+- ⬜ **You:** test payment with `success@razorpay` on the emulator
 
 ## Stage 5 — Administrator ⬜
 - ⬜ Add / edit products, categories, prices, photos
@@ -58,7 +64,7 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ⬜ Stock adjustment with mandatory reason
 - ⬜ Wastage recording
 - ⬜ View orders, mark ready / collected
-- ⬜ Refunds through the gateway (server-side)
+- ⬜ Admin-initiated refunds (automatic refunds for unfulfillable paid orders are done in Stage 4)
 
 ## Stage 6 — Reports (read-only role) ⬜
 - ⬜ Daily, monthly, custom date-range summaries

@@ -6,7 +6,8 @@ pickup, the administrator manages products and stock, and a read-only reporting 
 - **App:** Kotlin, Jetpack Compose, Material 3
 - **Backend:** Supabase — PostgreSQL, Auth, Storage (Edge Functions from Stage 4).
   Setup steps: [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md)
-- **Payments (from Stage 4):** payment gateway with server-side verification, test mode first
+- **Payments:** Razorpay with server-side verification, test mode first.
+  Setup steps: [`docs/PAYMENTS_SETUP.md`](docs/PAYMENTS_SETUP.md)
 
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the stages and
 [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for progress.
@@ -28,6 +29,7 @@ app/src/main/java/com/vsjbakery/app/
     ├── auth/                # AuthViewModel: sign-in state shared by all screens
     └── home/ category/ cart/ account/ staff/   # screens
 supabase/
+├── functions/               # server code: payments + Razorpay webhook (holds secret keys)
 ├── migrations/              # database tables, security rules, storage bucket, seed data
 ├── tests/database/          # automated security tests (pgTAP)
 └── config.toml              # Supabase CLI settings
