@@ -31,6 +31,9 @@ They take about 20 minutes.
 
 Go to **Supabase → SQL Editor → New query**. Paste
 `supabase/migrations/20261013090000_payments.sql` and click **Run**.
+Then, in a new query, run `supabase/migrations/20261013120000_service_role_read_access.sql`.
+It lets the server functions **read** orders and payments, which newer Supabase projects don't
+allow automatically.
 
 ## 2. Razorpay test keys
 
