@@ -3,6 +3,7 @@ package com.vsjbakery.app.data
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
 
 /**
@@ -29,6 +30,8 @@ data class SupabaseConfig(val url: String, val publishableKey: String) {
         // Auth keeps the login session on the device and refreshes it automatically.
         install(Auth)
         install(Postgrest)
+        // Calls our own server-side functions (payments).
+        install(Functions)
     }
 
     companion object {

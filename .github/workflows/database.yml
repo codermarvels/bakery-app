@@ -29,3 +29,13 @@ jobs:
       # Runs the pgTAP security tests in supabase/tests/database.
       - name: Row Level Security tests
         run: supabase test db
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # Type-checks the Edge Functions and runs their unit tests (no real Razorpay calls).
+      - name: Edge Function checks and tests
+        run: |
+          deno check supabase/functions/payments/index.ts supabase/functions/razorpay-webhook/index.ts
+          deno test supabase/functions

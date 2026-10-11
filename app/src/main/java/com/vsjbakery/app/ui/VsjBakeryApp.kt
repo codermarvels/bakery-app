@@ -31,6 +31,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.orders.OrdersViewModel
+import com.vsjbakery.app.ui.payments.PaymentHost
+import com.vsjbakery.app.ui.payments.PaymentViewModel
 import com.vsjbakery.app.ui.shop.ShopViewModel
 import com.vsjbakery.app.ui.navigation.AccountRoute
 import com.vsjbakery.app.ui.navigation.CartRoute
@@ -64,6 +66,8 @@ fun VsjBakeryApp() {
     val authViewModel: AuthViewModel = viewModel(factory = AppViewModelFactory)
     val shopViewModel: ShopViewModel = viewModel(factory = AppViewModelFactory)
     val ordersViewModel: OrdersViewModel = viewModel(factory = AppViewModelFactory)
+    val paymentViewModel: PaymentViewModel = viewModel(factory = AppViewModelFactory)
+    val paymentState by paymentViewModel.state.collectAsStateWithLifecycle()
     val cartState by shopViewModel.cartState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
@@ -106,7 +110,21 @@ fun VsjBakeryApp() {
             authViewModel = authViewModel,
             shopViewModel = shopViewModel,
             ordersViewModel = ordersViewModel,
+            paymentViewModel = paymentViewModel,
             modifier = Modifier.padding(innerPadding),
         )
     }
+
+    // Payment progress and results are shown on top of whatever screen is open.
+    PaymentHost(
+        state = paymentState,
+        onCheckoutOpened = paymentViewModel::onCheckoutOpened,
+        onCheckoutCouldNotOpen = paymentViewModel::onCheckoutCouldNotOpen,
+        onDismiss = paymentViewModel::dismiss,
+        onFinished = {
+            // Show the server's latest order status and stock.
+            ordersViewModel.load()
+            shopViewModel.refresh()
+        },
+    )
 }
