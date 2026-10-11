@@ -1,0 +1,31 @@
+name: Database tests
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: ["supabase/**", ".github/workflows/database.yml"]
+  pull_request:
+    paths: ["supabase/**", ".github/workflows/database.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrations-and-rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Starts the real Supabase Postgres image locally in Docker and applies every migration.
+      - name: Start database and apply migrations
+        run: supabase db start
+
+      # Runs the pgTAP security tests in supabase/tests/database.
+      - name: Row Level Security tests
+        run: supabase test db

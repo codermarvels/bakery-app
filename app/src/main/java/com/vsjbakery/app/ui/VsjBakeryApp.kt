@@ -20,11 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.navigation.AccountRoute
 import com.vsjbakery.app.ui.navigation.CartRoute
 import com.vsjbakery.app.ui.navigation.HomeRoute
@@ -53,6 +55,8 @@ private fun NavDestination?.isOn(routeClass: KClass<*>): Boolean =
 @Composable
 fun VsjBakeryApp() {
     val navController = rememberNavController()
+    // One AuthViewModel for the whole app, so every screen sees the same sign-in state.
+    val authViewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory)
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
     // The bottom bar only shows on the three main tabs, not on detail screens.
@@ -88,6 +92,7 @@ fun VsjBakeryApp() {
     ) { innerPadding ->
         VsjNavHost(
             navController = navController,
+            authViewModel = authViewModel,
             modifier = Modifier.padding(innerPadding),
         )
     }

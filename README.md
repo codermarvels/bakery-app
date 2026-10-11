@@ -4,7 +4,8 @@ An Android app for ordering, sales and accounting at VSJ BAKERY: customers order
 pickup, the administrator manages products and stock, and a read-only reporting user views sales reports.
 
 - **App:** Kotlin, Jetpack Compose, Material 3
-- **Backend (from Stage 2):** Supabase — PostgreSQL, Auth, Storage, Edge Functions
+- **Backend:** Supabase — PostgreSQL, Auth, Storage (Edge Functions from Stage 4).
+  Setup steps: [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md)
 - **Payments (from Stage 4):** payment gateway with server-side verification, test mode first
 
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the stages and
@@ -15,15 +16,23 @@ See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the stages 
 ```
 app/src/main/java/com/vsjbakery/app/
 ├── MainActivity.kt          # entry point: sets the theme and the app UI
-├── domain/model/            # plain Kotlin data (Category, Money, AppRole) — no Android code
+├── VsjBakeryApplication.kt  # creates AppContainer (shared objects) at app start
+├── AppContainer.kt          # builds the Supabase client and repositories once
+├── domain/model/            # plain Kotlin rules & data (Money, AppRole, validation) — no Android code
+├── data/                    # talks to Supabase (auth, database)
 └── ui/
     ├── VsjBakeryApp.kt      # app shell: bottom navigation bar + screens
     ├── navigation/          # typed routes and the navigation graph
     ├── theme/               # colours, fonts, shapes
     ├── components/          # reusable UI pieces
-    └── home/ category/ cart/ account/   # one folder per screen
+    ├── auth/                # AuthViewModel: sign-in state shared by all screens
+    └── home/ category/ cart/ account/ staff/   # screens
+supabase/
+├── migrations/              # database tables, security rules, storage bucket, seed data
+├── tests/database/          # automated security tests (pgTAP)
+└── config.toml              # Supabase CLI settings
 gradle/libs.versions.toml    # every library version in one place
-.github/workflows/android.yml  # CI: tests, lint, APK build on every push
+.github/workflows/            # CI: Android tests/lint/APK, database security tests
 ```
 
 ## Run it on your computer
@@ -31,7 +40,9 @@ gradle/libs.versions.toml    # every library version in one place
 1. Install the latest stable [Android Studio](https://developer.android.com/studio).
 2. **File → Open** and choose this folder. Android Studio downloads Gradle, the Android SDK (API 35)
    and all libraries automatically on first sync.
-3. Pick an emulator or a phone with USB debugging enabled and press **Run ▶**.
+3. Add your Supabase project URL and publishable key to `local.properties`
+   (see [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md), step 4).
+4. Pick an emulator or a phone with USB debugging enabled and press **Run ▶**.
 
 Command line equivalent (needs JDK 17+ and the Android SDK):
 

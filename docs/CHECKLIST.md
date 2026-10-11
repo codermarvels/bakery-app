@@ -13,14 +13,22 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Money formatter in paise with Indian digit grouping (+ unit tests)
 - ✅ GitHub Actions CI: unit tests, lint, debug APK build and download
 
-## Stage 2 — Backend & sign-in ⬜
-- ⬜ Supabase project connected (URL + anon key via `local.properties`, never committed)
-- ⬜ Migrations: profiles & roles, categories, products, stock ledger, orders, order items, payments, refunds
-- ⬜ Row Level Security on every table; role checks in server functions
-- ⬜ Storage bucket for product photos (public read, admin-only write)
-- ⬜ Starter categories seeded
-- ⬜ Email/password sign-in, sign-out, session persistence
-- ⬜ Role-based navigation (customer / admin / reports)
+## Stage 2 — Backend & sign-in 🟡 (code done — waiting for you to apply it in Supabase)
+- ✅ Migrations: profiles & roles, categories, products, stock ledger, orders, order items, payments, refunds
+- ✅ Row Level Security on every table + minimal table/column privileges
+- ✅ Roles: new accounts are always customers; admin/reports granted only from the dashboard
+- ✅ Stock ledger: admin-only `record_production`, `adjust_stock` (reason required), `record_wastage` (reason required); stock can't go below zero or be edited directly
+- ✅ Orders, payments, refunds: no app-side writes at all (server-only, Stage 3/4)
+- ✅ Storage bucket `product-images` (public view, admin-only upload, 5 MB, JPEG/PNG/WebP)
+- ✅ Six starter categories seeded
+- ✅ 41 automated security tests (pgTAP) + CI job on a real Supabase database
+- ✅ App: email/password sign-in, customer sign-up, sign-out, session kept between launches
+- ✅ App: role read from the server; staff entries refuse the wrong role; admin & reports dashboards (tools listed, switched on in Stages 5–6)
+- ✅ Supabase URL/key supplied at build time (`local.properties` / GitHub variables), never committed
+- ⬜ **You:** run the 3 migrations in the SQL editor (`docs/SUPABASE_SETUP.md` step 1)
+- ⬜ **You:** create admin + reports accounts and set their roles (step 3)
+- ⬜ **You:** add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` GitHub variables (step 4b)
+- ⬜ Password reset by email (planned with the confirmation landing page)
 
 ## Stage 3 — Catalogue & cart ⬜
 - ⬜ Products by category with photo, name, price, availability

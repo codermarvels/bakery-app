@@ -20,3 +20,12 @@ data class CategoryRoute(val slug: String, val name: String)
 
 @Serializable
 data class SignInRoute(val role: AppRole)
+
+@Serializable
+data object SignUpRoute
+
+@Serializable
+data object AdminHomeRoute
+
+@Serializable
+data object ReportsHomeRoute

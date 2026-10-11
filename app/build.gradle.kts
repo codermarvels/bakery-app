@@ -1,9 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// Supabase settings come from local.properties (on your computer) or environment variables
+// (in CI). They are never committed to Git. If missing, the app builds but sign-in is off.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun buildSetting(propertyKey: String, environmentKey: String): String =
+    (localProperties.getProperty(propertyKey) ?: System.getenv(environmentKey) ?: "").trim()
 
 android {
     namespace = "com.vsjbakery.app"
@@ -13,11 +25,18 @@ android {
         applicationId = "com.vsjbakery.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        buildConfigField("String", "SUPABASE_URL", "\"${buildSetting("supabase.url", "SUPABASE_URL")}\"")
+        buildConfigField(
+            "String",
+            "SUPABASE_PUBLISHABLE_KEY",
+            "\"${buildSetting("supabase.publishableKey", "SUPABASE_PUBLISHABLE_KEY")}\"",
+        )
     }
 
     buildTypes {
@@ -61,8 +80,12 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.supabase.auth)
+    implementation(libs.supabase.postgrest)
+    implementation(libs.ktor.client.okhttp)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -2,57 +2,69 @@ package com.vsjbakery.app.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.vsjbakery.app.data.auth.AuthState
 import com.vsjbakery.app.domain.model.AppRole
+import com.vsjbakery.app.ui.auth.AuthFormState
+import com.vsjbakery.app.ui.components.BackTopBar
+import com.vsjbakery.app.ui.components.MessageCard
+import com.vsjbakery.app.ui.components.SubmitButton
 
-/**
- * Sign-in form. Authentication is not connected yet (that is Stage 2, using Supabase Auth),
- * so the button stays disabled and the screen says so plainly instead of pretending to log in.
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignInScreen(
     role: AppRole,
+    authState: AuthState,
+    form: AuthFormState,
+    onSignIn: (email: String, password: String) -> Unit,
+    onCreateAccount: () -> Unit,
+    onSignedIn: (AppRole) -> Unit,
+    onResetForm: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+
+    // Leave the screen once the server has confirmed the sign-in.
+    LaunchedEffect(form.signedInAs) {
+        form.signedInAs?.let(onSignedIn)
+    }
+    DisposableEffect(Unit) {
+        onResetForm()
+        onDispose { onResetForm() }
+    }
+
+    val notConfigured = authState is AuthState.NotConfigured
+    val submit = { if (!form.isSubmitting && !notConfigured) onSignIn(email, password) }
 
     Column(
         modifier = modifier
@@ -60,18 +72,7 @@ fun SignInScreen(
             .windowInsetsPadding(WindowInsets.navigationBars)
             .imePadding(),
     ) {
-        TopAppBar(
-            title = { Text("${role.title} sign-in") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                titleContentColor = MaterialTheme.colorScheme.primary,
-            ),
-        )
+        BackTopBar(title = "${role.title} sign-in", onBack = onBack)
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
@@ -83,12 +84,19 @@ fun SignInScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (notConfigured) {
+                MessageCard(
+                    icon = Icons.Outlined.Info,
+                    message = "Sign-in is not set up in this version of the app.",
+                )
+            }
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                enabled = !form.isSubmitting,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
@@ -96,35 +104,33 @@ fun SignInScreen(
                 onValueChange = { password = it },
                 label = { Text("Password") },
                 singleLine = true,
+                enabled = !form.isSubmitting,
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(
-                onClick = {},
-                enabled = false,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Sign in")
-            }
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                ),
-            ) {
-                Row(modifier = Modifier.padding(16.dp)) {
-                    Icon(
-                        Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = "Sign-in is not available yet. It will be switched on once the bakery's secure account system is connected.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
+            form.errorMessage?.let { MessageCard(message = it, isError = true) }
+            SubmitButton(
+                text = "Sign in",
+                isSubmitting = form.isSubmitting,
+                enabled = !notConfigured,
+                onClick = submit,
+            )
+            if (role == AppRole.CUSTOMER) {
+                TextButton(
+                    onClick = onCreateAccount,
+                    enabled = !form.isSubmitting,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) {
+                    Text("New here? Create a customer account")
                 }
+            } else {
+                Text(
+                    text = "Staff accounts are created by the bakery owner. Ask them if you need access.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
