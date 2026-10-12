@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PointOfSale
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +49,7 @@ private enum class AdminTab(val label: String, val icon: ImageVector) {
 }
 
 /** Administrator dashboard: Counter sales, app Orders, Stock and Products. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminScreen(
     authState: AuthState,
