@@ -1,5 +1,6 @@
 package com.vsjbakery.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,6 +9,7 @@ import com.razorpay.Checkout
 import com.razorpay.PaymentData
 import com.razorpay.PaymentResultWithDataListener
 import com.vsjbakery.app.data.payments.CheckoutResult
+import com.vsjbakery.app.push.OrderAlerts
 import com.vsjbakery.app.ui.VsjBakeryApp
 import com.vsjbakery.app.ui.theme.VsjBakeryTheme
 import org.json.JSONObject
@@ -24,10 +26,24 @@ class MainActivity : ComponentActivity(), PaymentResultWithDataListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleAlertTap(intent)
         setContent {
             VsjBakeryTheme {
                 VsjBakeryApp()
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleAlertTap(intent)
+    }
+
+    /** Opened from a "New paid order" notification: show Admin → Orders. */
+    private fun handleAlertTap(intent: Intent?) {
+        if (intent?.getBooleanExtra(OrderAlerts.EXTRA_OPEN_ORDERS, false) == true) {
+            intent.removeExtra(OrderAlerts.EXTRA_OPEN_ORDERS)
+            (application as VsjBakeryApplication).container.openOrdersRequest.value = true
         }
     }
 

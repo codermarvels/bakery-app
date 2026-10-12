@@ -10,6 +10,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { isValidWebhookSignature, json, RazorpayApi, requireEnv, settlePayment } from "../_shared/razorpay.ts";
+import { notifyInBackground } from "../_shared/push.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false }, 405);
@@ -45,6 +46,7 @@ Deno.serve(async (req) => {
         const gateway = new RazorpayApi(requireEnv("RAZORPAY_KEY_ID"), requireEnv("RAZORPAY_KEY_SECRET"));
         // Re-reads the payment from Razorpay rather than trusting the webhook body alone.
         const result = await settlePayment(gateway, admin, razorpayOrderId, payment.id);
+        notifyInBackground(admin, result); // "New paid order" alert to the administrator's phone
         return json({ ok: true, result: result.result });
       }
       case "payment.failed": {

@@ -34,8 +34,8 @@ android {
         applicationId = "com.vsjbakery.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.0.0"
+        versionCode = 8
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -46,6 +46,12 @@ android {
             "SUPABASE_PUBLISHABLE_KEY",
             "\"${buildSetting("supabase.publishableKey", "SUPABASE_PUBLISHABLE_KEY")}\"",
         )
+        // Firebase identifiers for new-order alerts (public app identifiers, not secrets; the
+        // secret service-account key lives only in Supabase). Empty = alerts switched off.
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${buildSetting("firebase.projectId", "FIREBASE_PROJECT_ID")}\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"${buildSetting("firebase.appId", "FIREBASE_APP_ID")}\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"${buildSetting("firebase.apiKey", "FIREBASE_API_KEY")}\"")
+        buildConfigField("String", "FIREBASE_SENDER_ID", "\"${buildSetting("firebase.senderId", "FIREBASE_SENDER_ID")}\"")
         // Website with the privacy policy, terms and contact page (linked from the Account tab).
         buildConfigField("String", "POLICIES_URL", "\"${buildSetting("policies.url", "POLICIES_URL")}\"")
     }
@@ -110,6 +116,8 @@ dependencies {
     implementation(libs.supabase.functions)
     implementation(libs.supabase.storage)
     implementation(libs.razorpay.checkout)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)

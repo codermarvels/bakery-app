@@ -46,6 +46,8 @@ fun VsjNavHost(
     adminOrdersViewModel: AdminOrdersViewModel,
     counterViewModel: CounterViewModel,
     reportsViewModel: ReportsViewModel,
+    openOrdersRequested: Boolean = false,
+    onOpenOrdersHandled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
@@ -238,6 +240,8 @@ fun VsjNavHost(
                 onEditProduct = { id -> navController.navigate(ProductEditRoute(id.orEmpty())) },
                 onManageCategories = { navController.navigate(CategoriesRoute) },
                 onStockCount = { navController.navigate(StockCountRoute) },
+                openOrdersRequested = openOrdersRequested,
+                onOpenOrdersHandled = onOpenOrdersHandled,
                 onBack = { navController.popBackStack() },
             )
         }
