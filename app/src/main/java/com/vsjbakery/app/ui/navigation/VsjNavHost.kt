@@ -13,6 +13,13 @@ import com.vsjbakery.app.domain.model.AppRole
 import com.vsjbakery.app.ui.account.AccountScreen
 import com.vsjbakery.app.ui.account.SignInScreen
 import com.vsjbakery.app.ui.account.SignUpScreen
+import com.vsjbakery.app.ui.admin.AdminCatalogViewModel
+import com.vsjbakery.app.ui.admin.AdminOrdersViewModel
+import com.vsjbakery.app.ui.admin.AdminScreen
+import com.vsjbakery.app.ui.admin.CategoriesScreen
+import com.vsjbakery.app.ui.admin.CounterViewModel
+import com.vsjbakery.app.ui.admin.ProductEditScreen
+import com.vsjbakery.app.ui.admin.StockCountScreen
 import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.cart.CartScreen
 import com.vsjbakery.app.ui.cart.OrderPlacedScreen
@@ -23,7 +30,6 @@ import com.vsjbakery.app.ui.orders.OrdersViewModel
 import com.vsjbakery.app.ui.payments.PaymentState
 import com.vsjbakery.app.ui.payments.PaymentViewModel
 import com.vsjbakery.app.ui.shop.ShopViewModel
-import com.vsjbakery.app.ui.staff.AdminHomeScreen
 import com.vsjbakery.app.ui.staff.ReportsHomeScreen
 
 @Composable
@@ -33,6 +39,9 @@ fun VsjNavHost(
     shopViewModel: ShopViewModel,
     ordersViewModel: OrdersViewModel,
     paymentViewModel: PaymentViewModel,
+    adminCatalogViewModel: AdminCatalogViewModel,
+    adminOrdersViewModel: AdminOrdersViewModel,
+    counterViewModel: CounterViewModel,
     modifier: Modifier = Modifier,
 ) {
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
@@ -196,7 +205,31 @@ fun VsjNavHost(
             )
         }
         composable<AdminHomeRoute> {
-            AdminHomeScreen(authState = authState, onBack = { navController.popBackStack() })
+            AdminScreen(
+                authState = authState,
+                catalogViewModel = adminCatalogViewModel,
+                ordersViewModel = adminOrdersViewModel,
+                counterViewModel = counterViewModel,
+                onEditProduct = { id -> navController.navigate(ProductEditRoute(id.orEmpty())) },
+                onManageCategories = { navController.navigate(CategoriesRoute) },
+                onStockCount = { navController.navigate(StockCountRoute) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<ProductEditRoute> { entry ->
+            val id = entry.toRoute<ProductEditRoute>().productId
+            ProductEditScreen(
+                productId = id.ifBlank { null },
+                viewModel = adminCatalogViewModel,
+                onDone = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<CategoriesRoute> {
+            CategoriesScreen(viewModel = adminCatalogViewModel, onBack = { navController.popBackStack() })
+        }
+        composable<StockCountRoute> {
+            StockCountScreen(viewModel = adminCatalogViewModel, onBack = { navController.popBackStack() })
         }
         composable<ReportsHomeRoute> {
             ReportsHomeScreen(authState = authState, onBack = { navController.popBackStack() })

@@ -27,6 +27,16 @@ data object SignUpRoute
 @Serializable
 data object AdminHomeRoute
 
+/** Add (empty id) or edit a product. */
+@Serializable
+data class ProductEditRoute(val productId: String = "")
+
+@Serializable
+data object CategoriesRoute
+
+@Serializable
+data object StockCountRoute
+
 @Serializable
 data object ReportsHomeRoute
 

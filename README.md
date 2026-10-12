@@ -9,6 +9,7 @@ pickup, the administrator manages products and stock, and a read-only reporting 
 - **Payments:** Razorpay with server-side verification, test mode first.
   Setup steps: [`docs/PAYMENTS_SETUP.md`](docs/PAYMENTS_SETUP.md)
 
+Administrators: see [`docs/ADMIN_GUIDE.md`](docs/ADMIN_GUIDE.md).
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the stages and
 [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for progress.
 
@@ -27,7 +28,7 @@ app/src/main/java/com/vsjbakery/app/
     ├── theme/               # colours, fonts, shapes
     ├── components/          # reusable UI pieces
     ├── auth/                # AuthViewModel: sign-in state shared by all screens
-    └── home/ category/ cart/ account/ staff/   # screens
+    └── home/ category/ cart/ orders/ payments/ admin/ account/ staff/   # screens
 supabase/
 ├── functions/               # server code: payments + Razorpay webhook (holds secret keys)
 ├── migrations/              # database tables, security rules, storage bucket, seed data

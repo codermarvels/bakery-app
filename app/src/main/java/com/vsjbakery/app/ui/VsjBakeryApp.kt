@@ -29,6 +29,9 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.vsjbakery.app.ui.admin.AdminCatalogViewModel
+import com.vsjbakery.app.ui.admin.AdminOrdersViewModel
+import com.vsjbakery.app.ui.admin.CounterViewModel
 import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.orders.OrdersViewModel
 import com.vsjbakery.app.ui.payments.PaymentHost
@@ -68,6 +71,10 @@ fun VsjBakeryApp() {
     val ordersViewModel: OrdersViewModel = viewModel(factory = AppViewModelFactory)
     val paymentViewModel: PaymentViewModel = viewModel(factory = AppViewModelFactory)
     val paymentState by paymentViewModel.state.collectAsStateWithLifecycle()
+    // Admin screens share these, so a product saved on the edit screen shows in the lists.
+    val adminCatalogViewModel: AdminCatalogViewModel = viewModel(factory = AppViewModelFactory)
+    val adminOrdersViewModel: AdminOrdersViewModel = viewModel(factory = AppViewModelFactory)
+    val counterViewModel: CounterViewModel = viewModel(factory = AppViewModelFactory)
     val cartState by shopViewModel.cartState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
@@ -111,6 +118,9 @@ fun VsjBakeryApp() {
             shopViewModel = shopViewModel,
             ordersViewModel = ordersViewModel,
             paymentViewModel = paymentViewModel,
+            adminCatalogViewModel = adminCatalogViewModel,
+            adminOrdersViewModel = adminOrdersViewModel,
+            counterViewModel = counterViewModel,
             modifier = Modifier.padding(innerPadding),
         )
     }

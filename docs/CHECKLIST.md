@@ -62,13 +62,18 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ⬜ Confirm the Razorpay webhook deliveries succeed (Razorpay → Webhooks → delivery list)
 - ⬜ UPI option: enable in Razorpay → Payment methods, and test on a real phone with a UPI app
 
-## Stage 5 — Administrator ⬜
-- ⬜ Add / edit products, categories, prices, photos
-- ⬜ Record fresh production (stock in)
-- ⬜ Stock adjustment with mandatory reason
-- ⬜ Wastage recording
-- ⬜ View orders, mark ready / collected
-- ⬜ Admin-initiated refunds (automatic refunds for unfulfillable paid orders are done in Stage 4)
+## Stage 5 — Administrator 🟡 (code done — apply migration, then test on the emulator)
+- ✅ Admin dashboard with four tabs, each with an ⓘ "what to enter" button
+- ✅ **Counter** tab: walk-in sales (items, quantities, Cash / UPI / Card, note); stock reduced immediately; today's totals by payment method; undo with reason (restocks, records refund)
+- ✅ **Orders** tab: app orders by status (to prepare / ready / collected / unpaid / cancelled); mark ready, mark collected
+- ✅ **Stock** tab: + made (production), wastage (reason required), adjust (reason required), per-product history
+- ✅ End-of-day count: counted quantity becomes stock; unrecorded differences shown with their value and stored for reports
+- ✅ **Products** tab: add/edit products (category, price in ₹, description, show in app) with photo upload (auto-resized)
+- ✅ Categories: add, rename, reorder, hide
+- ✅ All admin actions are administrator-only in the database; reports user can read but not change (42 new tests, 155 total)
+- ✅ Admin guide: `docs/ADMIN_GUIDE.md`
+- ⬜ **You:** run `20261014090000_admin_tools.sql` in the SQL editor (`docs/SUPABASE_SETUP.md` step 7)
+- ⬜ **You:** test each tab on the emulator
 
 ## Stage 6 — Reports (read-only role) ⬜
 - ⬜ Daily, monthly, custom date-range summaries
