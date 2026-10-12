@@ -1,7 +1,8 @@
 """Builds the policy website: puts each page in layout.html and fills {{KEY}} from details.properties.
 
-Usage: python3 site/build.py <output-dir>
+Usage: python3 site/build.py <output-dir> [--preview]
 Fails (and lists what is missing) if any detail is empty, so incomplete pages are never published.
+--preview only warns, filling gaps with "[to be filled]" (used to check pull requests).
 """
 import html
 import pathlib
@@ -25,11 +26,14 @@ def load_details():
 
 def main():
     out = pathlib.Path(sys.argv[1])
+    preview = "--preview" in sys.argv[2:]
     details = load_details()
     missing = [k for k, v in details.items() if not v]
     if missing:
         print("Fill these in site/details.properties before publishing: " + ", ".join(missing))
-        sys.exit(1)
+        if not preview:
+            sys.exit(2)  # 2 = details missing (the workflow then skips publishing)
+        details.update({k: "[to be filled]" for k in missing})
 
     if out.exists():
         shutil.rmtree(out)
