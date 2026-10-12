@@ -145,7 +145,7 @@ private fun OrderCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                StatusChip(order.status)
+                StatusChip(order.status, order.refund?.chipLabel)
             }
             Spacer(Modifier.height(12.dp))
             order.items.forEach { item ->
@@ -175,6 +175,21 @@ private fun OrderCard(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                 )
+            }
+            order.refund?.let { refund ->
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = refund.customerMessage(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(10.dp),
+                    )
+                }
             }
             if (order.status == OrderStatus.PENDING_PAYMENT) {
                 Spacer(Modifier.height(8.dp))
@@ -211,8 +226,10 @@ private fun OrderCard(
 }
 
 @Composable
-private fun StatusChip(status: OrderStatus) {
-    val (container, content) = when (status) {
+private fun StatusChip(status: OrderStatus, overrideLabel: String? = null) {
+    val (container, content) = if (overrideLabel != null) {
+        MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+    } else when (status) {
         OrderStatus.PENDING_PAYMENT -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
         OrderStatus.PAID, OrderStatus.READY_FOR_PICKUP -> SuccessGreen.copy(alpha = 0.15f) to SuccessGreen
         OrderStatus.COLLECTED -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
@@ -220,7 +237,7 @@ private fun StatusChip(status: OrderStatus) {
     }
     Surface(shape = MaterialTheme.shapes.small, color = container) {
         Text(
-            text = status.label,
+            text = overrideLabel ?: status.label,
             style = MaterialTheme.typography.labelMedium,
             color = content,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
