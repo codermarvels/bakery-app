@@ -1,6 +1,14 @@
 package com.vsjbakery.app.ui.admin
 
+import android.Manifest
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +20,7 @@ import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.PointOfSale
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AlertDialog
@@ -33,6 +42,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.vsjbakery.app.push.OrderAlerts
 import androidx.compose.ui.unit.dp
 import com.vsjbakery.app.data.auth.AuthState
 import com.vsjbakery.app.domain.model.AppRole
@@ -61,6 +73,8 @@ fun AdminScreen(
     onStockCount: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    openOrdersRequested: Boolean = false,
+    onOpenOrdersHandled: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
@@ -81,6 +95,16 @@ fun AdminScreen(
             )
             return@Column
         }
+
+        // Opened from a "New paid order" notification.
+        LaunchedEffect(openOrdersRequested) {
+            if (openOrdersRequested) {
+                selectedTab = AdminTab.ORDERS.ordinal
+                ordersViewModel.load()
+                onOpenOrdersHandled()
+            }
+        }
+        OrderAlertsBanner()
 
         PrimaryTabRow(selectedTabIndex = selectedTab) {
             AdminTab.entries.forEachIndexed { index, tab ->
@@ -103,6 +127,53 @@ fun AdminScreen(
                 onManageCategories = onManageCategories,
             )
         }
+    }
+}
+
+/**
+ * Asks once for permission to show new-order alerts (Android 13+), and shows a short note
+ * while alerts can't sound on this phone.
+ */
+@Composable
+private fun OrderAlertsBanner() {
+    val context = LocalContext.current
+    var canAlert by remember { mutableStateOf(OrderAlerts.canAlert(context)) }
+    val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        canAlert = OrderAlerts.canAlert(context)
+    }
+    LaunchedEffect(Unit) {
+        if (OrderAlerts.isConfigured && !OrderAlerts.hasPermission(context) &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        ) {
+            askPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+    // Re-check when coming back from the phone's settings.
+    LifecycleResumeEffect(Unit) {
+        canAlert = OrderAlerts.canAlert(context)
+        onPauseOrDispose { }
+    }
+    val text = when {
+        !OrderAlerts.isConfigured -> "New-order alerts are not set up in this version of the app."
+        !canAlert -> "Notifications are off, so you won't hear new orders. Tap to turn them on."
+        else -> return
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        MessageCard(
+            message = text,
+            icon = Icons.Outlined.NotificationsOff,
+            modifier = Modifier.clickable(enabled = OrderAlerts.isConfigured) {
+                context.startActivity(
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            },
+        )
     }
 }
 

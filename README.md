@@ -12,6 +12,7 @@ pickup, the administrator manages products and stock, and a read-only reporting 
 Administrators: see [`docs/ADMIN_GUIDE.md`](docs/ADMIN_GUIDE.md).
 Reports: see [`docs/REPORTS_GUIDE.md`](docs/REPORTS_GUIDE.md).
 Launch: [`docs/GO_LIVE.md`](docs/GO_LIVE.md) and [`docs/RELEASE.md`](docs/RELEASE.md).
+New-order alerts on the admin phone: [`docs/ORDER_ALERTS.md`](docs/ORDER_ALERTS.md).
 Policy website (privacy, terms, refunds): <https://codermarvels.github.io/bakery-app/>, from `site/`.
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the stages and
 [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for progress.

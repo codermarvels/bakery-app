@@ -32,6 +32,7 @@ import {
   settlePayment,
   settleRazorpayOrder,
 } from "../_shared/razorpay.ts";
+import { notifyInBackground } from "../_shared/push.ts";
 
 /** Server-side database client (service role; bypasses Row Level Security, so check ownership). */
 function createAdminClient() {
@@ -131,6 +132,7 @@ Deno.serve(async (req) => {
       for (const attempt of attempts ?? []) {
         if (!attempt.provider_order_id) continue;
         const result = await settleRazorpayOrder(gateway, admin, attempt.provider_order_id);
+        notifyInBackground(admin, result);
         if (result.result !== "not_captured") return json({ ok: true, ...result });
       }
       return json({ ok: true, result: "not_captured" });
@@ -157,6 +159,7 @@ Deno.serve(async (req) => {
       }
 
       const result = await settlePayment(gateway, admin, razorpayOrderId, razorpayPaymentId);
+      notifyInBackground(admin, result); // "New paid order" alert to the administrator's phone
       return json({ ok: true, ...result });
     }
 

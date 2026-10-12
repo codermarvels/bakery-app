@@ -100,4 +100,8 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Security review of the new server paths (role checks in database and function, no secrets in app)
 - ⬜ **You:** steps 1–7 of `docs/GO_LIVE.md` (migrations, SMTP + reset email, policy details,
   Razorpay KYC & live keys, cleanup, upload key, Play Console)
-- ⬜ Later (optional): instrumented UI tests, customer-facing refund status, push notifications
+- ✅ Customers see refunds in *My orders* (amount, date, reason)
+- ✅ **New-order alerts** with sound on the admin phone (Firebase push), sent only after the server
+  verifies a payment; tap opens Admin → Orders (`docs/ORDER_ALERTS.md`)
+- ⬜ **You:** Firebase setup in `docs/ORDER_ALERTS.md`
+- ⬜ Later (optional): instrumented UI tests

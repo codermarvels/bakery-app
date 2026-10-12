@@ -19,7 +19,11 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import com.vsjbakery.app.VsjBakeryApplication
+import com.vsjbakery.app.ui.navigation.AdminHomeRoute
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -77,6 +81,17 @@ fun VsjBakeryApp() {
     val adminOrdersViewModel: AdminOrdersViewModel = viewModel(factory = AppViewModelFactory)
     val counterViewModel: CounterViewModel = viewModel(factory = AppViewModelFactory)
     val reportsViewModel: ReportsViewModel = viewModel(factory = AppViewModelFactory)
+
+    // New-order alerts: refresh the admin lists when one arrives, and open Admin → Orders
+    // when the administrator taps the notification.
+    val container = (LocalContext.current.applicationContext as VsjBakeryApplication).container
+    val openOrdersRequested by container.openOrdersRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        container.newOrderSignals.collect { adminOrdersViewModel.load() }
+    }
+    LaunchedEffect(openOrdersRequested) {
+        if (openOrdersRequested) navController.navigate(AdminHomeRoute) { launchSingleTop = true }
+    }
     val cartState by shopViewModel.cartState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
@@ -124,6 +139,8 @@ fun VsjBakeryApp() {
             adminOrdersViewModel = adminOrdersViewModel,
             counterViewModel = counterViewModel,
             reportsViewModel = reportsViewModel,
+            openOrdersRequested = openOrdersRequested,
+            onOpenOrdersHandled = { container.openOrdersRequest.value = false },
             modifier = Modifier.padding(innerPadding),
         )
     }

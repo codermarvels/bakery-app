@@ -40,6 +40,8 @@ private data class ProfileRow(
 class SupabaseAuthRepository(
     private val client: SupabaseClient,
     scope: CoroutineScope,
+    /** Runs while still signed in, e.g. to stop new-order alerts on this phone. */
+    private val beforeSignOut: suspend () -> Unit = {},
 ) : AuthRepository {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
@@ -104,6 +106,7 @@ class SupabaseAuthRepository(
     }
 
     override suspend fun signOut() {
+        beforeSignOut()
         try {
             client.auth.signOut()
         } catch (e: CancellationException) {
