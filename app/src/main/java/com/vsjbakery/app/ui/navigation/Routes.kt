@@ -24,6 +24,10 @@ data class SignInRoute(val role: AppRole)
 @Serializable
 data object SignUpRoute
 
+/** "Forgot password": email a code, then choose a new password. */
+@Serializable
+data class ResetPasswordRoute(val role: AppRole, val email: String = "")
+
 @Serializable
 data object AdminHomeRoute
 

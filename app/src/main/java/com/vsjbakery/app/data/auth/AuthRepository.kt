@@ -14,6 +14,18 @@ interface AuthRepository {
 
     /** Reloads the profile, e.g. after a network error or a role change. */
     suspend fun refreshProfile()
+
+    /** Emails a one-time code for choosing a new password. Returns an error message, or null. */
+    suspend fun sendPasswordResetCode(email: String): String?
+
+    /** Checks the emailed code, sets the new password and signs in. */
+    suspend fun resetPassword(email: String, code: String, newPassword: String): AuthResult
+
+    /**
+     * Permanently deletes the signed-in customer's account (the server keeps past orders as
+     * anonymous sales records). Returns an error message, or null when deleted.
+     */
+    suspend fun deleteAccount(): String?
 }
 
 /** Used when the build has no Supabase settings: everything reports "not configured". */
@@ -29,4 +41,7 @@ class UnconfiguredAuthRepository : AuthRepository {
     override suspend fun signUp(fullName: String, email: String, password: String) = failure
     override suspend fun signOut() = Unit
     override suspend fun refreshProfile() = Unit
+    override suspend fun sendPasswordResetCode(email: String) = failure.message
+    override suspend fun resetPassword(email: String, code: String, newPassword: String) = failure
+    override suspend fun deleteAccount() = failure.message
 }

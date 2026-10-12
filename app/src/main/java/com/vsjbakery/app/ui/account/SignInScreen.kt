@@ -46,6 +46,7 @@ fun SignInScreen(
     form: AuthFormState,
     onSignIn: (email: String, password: String) -> Unit,
     onCreateAccount: () -> Unit,
+    onForgotPassword: (email: String) -> Unit,
     onSignedIn: (AppRole) -> Unit,
     onResetForm: () -> Unit,
     onBack: () -> Unit,
@@ -117,6 +118,13 @@ fun SignInScreen(
                 enabled = !notConfigured,
                 onClick = submit,
             )
+            TextButton(
+                onClick = { onForgotPassword(email) },
+                enabled = !form.isSubmitting && !notConfigured,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                Text("Forgot password?")
+            }
             if (role == AppRole.CUSTOMER) {
                 TextButton(
                     onClick = onCreateAccount,

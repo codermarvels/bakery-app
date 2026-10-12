@@ -10,7 +10,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.vsjbakery.app.domain.model.AppRole
+import com.vsjbakery.app.BuildConfig
 import com.vsjbakery.app.ui.account.AccountScreen
+import com.vsjbakery.app.ui.account.ResetPasswordScreen
 import com.vsjbakery.app.ui.account.SignInScreen
 import com.vsjbakery.app.ui.account.SignUpScreen
 import com.vsjbakery.app.ui.admin.AdminCatalogViewModel
@@ -55,6 +57,8 @@ fun VsjNavHost(
     val checkout by shopViewModel.checkout.collectAsStateWithLifecycle()
     val ordersState by ordersViewModel.state.collectAsStateWithLifecycle()
     val paymentState by paymentViewModel.state.collectAsStateWithLifecycle()
+    val resetState by authViewModel.reset.collectAsStateWithLifecycle()
+    val deleteState by authViewModel.delete.collectAsStateWithLifecycle()
 
     // After signing in, staff go straight to their dashboard. Customers go back to where
     // they came from (for example the cart, to finish ordering).
@@ -172,6 +176,10 @@ fun VsjNavHost(
                 onOpenOrders = { navController.navigate(MyOrdersRoute) },
                 onRetryProfile = authViewModel::retryProfile,
                 onSignOut = authViewModel::signOut,
+                deleteState = deleteState,
+                onDeleteAccount = authViewModel::deleteAccount,
+                onClearDeleteError = authViewModel::clearDeleteError,
+                policiesUrl = BuildConfig.POLICIES_URL,
             )
         }
         composable<SignInRoute> { entry ->
@@ -186,8 +194,23 @@ fun VsjNavHost(
                         popUpTo<SignInRoute> { inclusive = true }
                     }
                 },
+                onForgotPassword = { email -> navController.navigate(ResetPasswordRoute(role, email)) },
                 onSignedIn = onSignedIn,
                 onResetForm = authViewModel::resetForm,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<ResetPasswordRoute> { entry ->
+            val route = entry.toRoute<ResetPasswordRoute>()
+            ResetPasswordScreen(
+                role = route.role,
+                initialEmail = route.email,
+                state = resetState,
+                form = form,
+                onStart = authViewModel::startPasswordReset,
+                onSendCode = authViewModel::sendResetCode,
+                onReset = { code, password, confirm -> authViewModel.resetPassword(code, password, confirm, route.role) },
+                onSignedIn = onSignedIn,
                 onBack = { navController.popBackStack() },
             )
         }
