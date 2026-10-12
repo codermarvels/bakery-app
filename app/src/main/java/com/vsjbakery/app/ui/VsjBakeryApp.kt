@@ -36,6 +36,7 @@ import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.orders.OrdersViewModel
 import com.vsjbakery.app.ui.payments.PaymentHost
 import com.vsjbakery.app.ui.payments.PaymentViewModel
+import com.vsjbakery.app.ui.reports.ReportsViewModel
 import com.vsjbakery.app.ui.shop.ShopViewModel
 import com.vsjbakery.app.ui.navigation.AccountRoute
 import com.vsjbakery.app.ui.navigation.CartRoute
@@ -75,6 +76,7 @@ fun VsjBakeryApp() {
     val adminCatalogViewModel: AdminCatalogViewModel = viewModel(factory = AppViewModelFactory)
     val adminOrdersViewModel: AdminOrdersViewModel = viewModel(factory = AppViewModelFactory)
     val counterViewModel: CounterViewModel = viewModel(factory = AppViewModelFactory)
+    val reportsViewModel: ReportsViewModel = viewModel(factory = AppViewModelFactory)
     val cartState by shopViewModel.cartState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
@@ -121,6 +123,7 @@ fun VsjBakeryApp() {
             adminCatalogViewModel = adminCatalogViewModel,
             adminOrdersViewModel = adminOrdersViewModel,
             counterViewModel = counterViewModel,
+            reportsViewModel = reportsViewModel,
             modifier = Modifier.padding(innerPadding),
         )
     }

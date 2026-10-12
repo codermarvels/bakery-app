@@ -30,7 +30,8 @@ import com.vsjbakery.app.ui.orders.OrdersViewModel
 import com.vsjbakery.app.ui.payments.PaymentState
 import com.vsjbakery.app.ui.payments.PaymentViewModel
 import com.vsjbakery.app.ui.shop.ShopViewModel
-import com.vsjbakery.app.ui.staff.ReportsHomeScreen
+import com.vsjbakery.app.ui.reports.ReportsScreen
+import com.vsjbakery.app.ui.reports.ReportsViewModel
 
 @Composable
 fun VsjNavHost(
@@ -42,6 +43,7 @@ fun VsjNavHost(
     adminCatalogViewModel: AdminCatalogViewModel,
     adminOrdersViewModel: AdminOrdersViewModel,
     counterViewModel: CounterViewModel,
+    reportsViewModel: ReportsViewModel,
     modifier: Modifier = Modifier,
 ) {
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
@@ -232,7 +234,11 @@ fun VsjNavHost(
             StockCountScreen(viewModel = adminCatalogViewModel, onBack = { navController.popBackStack() })
         }
         composable<ReportsHomeRoute> {
-            ReportsHomeScreen(authState = authState, onBack = { navController.popBackStack() })
+            ReportsScreen(
+                authState = authState,
+                viewModel = reportsViewModel,
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

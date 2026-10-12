@@ -10,6 +10,7 @@ pickup, the administrator manages products and stock, and a read-only reporting 
   Setup steps: [`docs/PAYMENTS_SETUP.md`](docs/PAYMENTS_SETUP.md)
 
 Administrators: see [`docs/ADMIN_GUIDE.md`](docs/ADMIN_GUIDE.md).
+Reports: see [`docs/REPORTS_GUIDE.md`](docs/REPORTS_GUIDE.md).
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the stages and
 [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for progress.
 

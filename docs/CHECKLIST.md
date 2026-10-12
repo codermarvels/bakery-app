@@ -62,7 +62,7 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ⬜ Confirm the Razorpay webhook deliveries succeed (Razorpay → Webhooks → delivery list)
 - ⬜ UPI option: enable in Razorpay → Payment methods, and test on a real phone with a UPI app
 
-## Stage 5 — Administrator 🟡 (code done — apply migration, then test on the emulator)
+## Stage 5 — Administrator ✅
 - ✅ Admin dashboard with four tabs, each with an ⓘ "what to enter" button
 - ✅ **Counter** tab: walk-in sales (items, quantities, Cash / UPI / Card, note); stock reduced immediately; today's totals by payment method; undo with reason (restocks, records refund)
 - ✅ **Orders** tab: app orders by status (to prepare / ready / collected / unpaid / cancelled); mark ready, mark collected
@@ -72,14 +72,18 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Categories: add, rename, reorder, hide
 - ✅ All admin actions are administrator-only in the database; reports user can read but not change (42 new tests, 155 total)
 - ✅ Admin guide: `docs/ADMIN_GUIDE.md`
-- ⬜ **You:** run `20261014090000_admin_tools.sql` in the SQL editor (`docs/SUPABASE_SETUP.md` step 7)
-- ⬜ **You:** test each tab on the emulator
+- ✅ Migration applied and every tab tested on the emulator
 
-## Stage 6 — Reports (read-only role) ⬜
-- ⬜ Daily, monthly, custom date-range summaries
-- ⬜ Paid order count, gross sales, refunds, net sales, item-wise quantities
-- ⬜ PDF export and share
-- ⬜ Database-enforced read-only access for the reports role
+## Stage 6 — Reports (read-only role) 🟡 (code done — apply migration, then test on the emulator)
+- ✅ `sales_report(from, to)` database function: staff only, read-only, Indian-time days, max one year
+- ✅ Today, Yesterday, This month, Last month and Custom (date-range picker)
+- ✅ Paid orders (app / counter), gross sales, refunds, net sales, money by payment method,
+  item-wise quantities, daily breakdown, production, wastage and end-of-day count differences
+- ✅ Export PDF (A4, multi-page) and share through any app (WhatsApp, Gmail, Drive…)
+- ✅ Reports account and administrator can both open it; everyone else is refused by the database
+- ✅ 29 new database tests (184 in total) and app unit tests for the report parser
+- ⬜ **You:** run `20261015090000_sales_reports.sql` in the SQL editor (`docs/SUPABASE_SETUP.md` step 8)
+- ⬜ **You:** open reports as the reports user, compare with a day you know, export a PDF
 
 ## Stage 7 — Release ⬜
 - ⬜ Instrumented UI tests, security review

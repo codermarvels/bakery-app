@@ -14,6 +14,8 @@ import com.vsjbakery.app.data.orders.SupabaseOrderRepository
 import com.vsjbakery.app.data.payments.CheckoutResults
 import com.vsjbakery.app.data.payments.PaymentRepository
 import com.vsjbakery.app.data.payments.SupabasePaymentRepository
+import com.vsjbakery.app.data.reports.ReportsRepository
+import com.vsjbakery.app.data.reports.SupabaseReportsRepository
 import io.github.jan.supabase.SupabaseClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +50,8 @@ class AppContainer {
     val adminRepository: AdminRepository? = supabase?.let { SupabaseAdminRepository(it, supabaseConfig) }
 
     val paymentRepository: PaymentRepository? = supabase?.let { SupabasePaymentRepository(it) }
+
+    val reportsRepository: ReportsRepository? = supabase?.let { SupabaseReportsRepository(it) }
 
     /** Razorpay Checkout's on-phone result, passed from MainActivity to the payment screen. */
     val checkoutResults = CheckoutResults()
