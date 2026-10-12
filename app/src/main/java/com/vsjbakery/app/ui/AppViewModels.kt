@@ -6,6 +6,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.vsjbakery.app.AppContainer
 import com.vsjbakery.app.VsjBakeryApplication
+import com.vsjbakery.app.ui.admin.AdminCatalogViewModel
+import com.vsjbakery.app.ui.admin.AdminOrdersViewModel
+import com.vsjbakery.app.ui.admin.CounterViewModel
 import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.orders.OrdersViewModel
 import com.vsjbakery.app.ui.payments.PaymentViewModel
@@ -26,4 +29,7 @@ val AppViewModelFactory = viewModelFactory {
         val c = container()
         PaymentViewModel(c.paymentRepository, c.checkoutResults)
     }
+    initializer { AdminCatalogViewModel(container().adminRepository) }
+    initializer { AdminOrdersViewModel(container().adminRepository) }
+    initializer { CounterViewModel(container().adminRepository) }
 }

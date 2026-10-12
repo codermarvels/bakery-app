@@ -15,15 +15,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Today
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Card
@@ -44,35 +38,12 @@ import com.vsjbakery.app.ui.components.SectionHeader
 
 private data class StaffTool(val icon: ImageVector, val title: String, val detail: String)
 
-private val adminTools = listOf(
-    StaffTool(Icons.Filled.Storefront, "Products", "Add and edit products, prices and photos"),
-    StaffTool(Icons.Filled.Category, "Categories", "Rename, reorder, hide or add categories"),
-    StaffTool(Icons.Filled.Inventory, "Record production", "Add freshly prepared stock"),
-    StaffTool(Icons.Filled.Tune, "Adjust stock", "Correct stock counts with a reason"),
-    StaffTool(Icons.Filled.DeleteSweep, "Record wastage", "Log spoiled or discarded items"),
-    StaffTool(Icons.AutoMirrored.Filled.ReceiptLong, "Orders", "View paid orders and mark them ready or collected"),
-)
-
 private val reportTools = listOf(
     StaffTool(Icons.Filled.Today, "Daily summary", "Paid orders, gross sales, refunds and net sales for a day"),
     StaffTool(Icons.Filled.CalendarMonth, "Monthly summary", "The same totals for a whole month"),
     StaffTool(Icons.Filled.DateRange, "Custom date range", "Totals and item-wise quantities for any period"),
     StaffTool(Icons.Filled.PictureAsPdf, "Export PDF", "Save or share any report as a PDF"),
 )
-
-@Composable
-fun AdminHomeScreen(authState: AuthState, onBack: () -> Unit, modifier: Modifier = Modifier) {
-    StaffHome(
-        title = "Admin dashboard",
-        requiredRole = AppRole.ADMIN,
-        authState = authState,
-        intro = "Bakery management tools",
-        note = "These tools are switched on in Stage 5.",
-        tools = adminTools,
-        onBack = onBack,
-        modifier = modifier,
-    )
-}
 
 @Composable
 fun ReportsHomeScreen(authState: AuthState, onBack: () -> Unit, modifier: Modifier = Modifier) {

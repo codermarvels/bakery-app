@@ -1,6 +1,8 @@
 package com.vsjbakery.app
 
 import com.vsjbakery.app.data.SupabaseConfig
+import com.vsjbakery.app.data.admin.AdminRepository
+import com.vsjbakery.app.data.admin.SupabaseAdminRepository
 import com.vsjbakery.app.data.auth.AuthRepository
 import com.vsjbakery.app.data.auth.SupabaseAuthRepository
 import com.vsjbakery.app.data.auth.UnconfiguredAuthRepository
@@ -42,6 +44,8 @@ class AppContainer {
     val orderRepository: OrderRepository? = supabase?.let { SupabaseOrderRepository(it) }
 
     val cartRepository = CartRepository()
+
+    val adminRepository: AdminRepository? = supabase?.let { SupabaseAdminRepository(it, supabaseConfig) }
 
     val paymentRepository: PaymentRepository? = supabase?.let { SupabasePaymentRepository(it) }
 

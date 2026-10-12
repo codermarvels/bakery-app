@@ -5,6 +5,7 @@ import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.storage.Storage
 
 /**
  * Where the app finds the bakery's Supabase project. Both values are public by design
@@ -32,6 +33,8 @@ data class SupabaseConfig(val url: String, val publishableKey: String) {
         install(Postgrest)
         // Calls our own server-side functions (payments).
         install(Functions)
+        // Product photo uploads (administrator only; enforced by storage policies).
+        install(Storage)
     }
 
     companion object {
