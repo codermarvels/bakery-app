@@ -78,7 +78,34 @@ data class AdminOrder(
     val order: Order,
     val customerName: String,
     val customerPhone: String?,
-)
+    /** Paid online through the app (Razorpay), so it can be refunded from here. */
+    val paidOnline: Boolean = false,
+    val refund: RefundState? = null,
+) {
+    /** A full refund can be started (paid orders) or retried (one that did not go through). */
+    val canRefund: Boolean
+        get() = paidOnline && when (refund) {
+            null -> order.status in setOf(OrderStatus.PAID, OrderStatus.READY_FOR_PICKUP, OrderStatus.COLLECTED)
+            RefundState.PROCESSED -> false
+            RefundState.PENDING, RefundState.FAILED -> true
+        }
+}
+
+enum class RefundState(val label: String) {
+    PENDING("Refund in progress"),
+    PROCESSED("Refunded"),
+    FAILED("Refund failed — tap Retry refund"),
+    ;
+
+    companion object {
+        fun fromDatabase(value: String?): RefundState? = when (value) {
+            "pending" -> PENDING
+            "processed" -> PROCESSED
+            "failed" -> FAILED
+            else -> null
+        }
+    }
+}
 
 /** One walk-in sale recorded at the counter. */
 data class CounterSale(

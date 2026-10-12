@@ -15,7 +15,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +32,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,18 +44,24 @@ import com.vsjbakery.app.domain.model.AdminOrder
 import com.vsjbakery.app.domain.model.Money
 import com.vsjbakery.app.domain.model.OrderDates
 import com.vsjbakery.app.domain.model.OrderStatus
+import com.vsjbakery.app.domain.model.RefundState
 
 private const val ORDERS_INFO =
     "Orders placed in the app for pickup.\n\n" +
         "• To prepare: paid orders. Pack them, then tap Mark ready.\n" +
         "• Ready: waiting at the counter. When the customer picks up, tap Collected.\n" +
         "• Unpaid: not paid yet. Do not prepare these.\n\n" +
+        "Refund: gives the full amount back to the customer's UPI / card / bank through Razorpay and " +
+        "cancels the order. Use it when the customer cancels before you prepare the order, when you " +
+        "cannot make it, or for a quality complaint. Always refund here, not only in the Razorpay " +
+        "dashboard, so sales reports and stock stay correct.\n\n" +
         "Walk-in customers are recorded in the Counter tab, not here."
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrdersTab(viewModel: AdminOrdersViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var refunding by remember { mutableStateOf<AdminOrder?>(null) }
     LaunchedEffect(Unit) { viewModel.load() }
 
     Column(Modifier.fillMaxSize()) {
@@ -103,16 +116,74 @@ fun OrdersTab(viewModel: AdminOrdersViewModel) {
                             isUpdating = state.updatingId == order.order.id,
                             onReady = { viewModel.markReady(order) },
                             onCollected = { viewModel.markCollected(order) },
+                            onRefund = { refunding = order },
                         )
                     }
                 }
             }
         }
     }
+    refunding?.let { order ->
+        RefundDialog(
+            order = order,
+            onConfirm = { reason, restock ->
+                refunding = null
+                viewModel.refund(order, reason, restock)
+            },
+            onDismiss = { refunding = null },
+        )
+    }
 }
 
 @Composable
-private fun AdminOrderCard(order: AdminOrder, isUpdating: Boolean, onReady: () -> Unit, onCollected: () -> Unit) {
+private fun RefundDialog(order: AdminOrder, onConfirm: (String, Boolean) -> Unit, onDismiss: () -> Unit) {
+    val o = order.order
+    val retry = order.refund != null
+    // Collected items are with the customer; the server never restocks those anyway.
+    val canRestock = !retry && o.status != OrderStatus.COLLECTED
+    var reason by remember { mutableStateOf("") }
+    var restock by remember { mutableStateOf(canRestock) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (retry) "Retry refund for order #${o.number}?" else "Refund order #${o.number}?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "${Money.formatRupees(o.totalPaise)} goes back to ${order.customerName}'s original payment method " +
+                        "through Razorpay. The order is cancelled. This cannot be undone.",
+                )
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it.take(250) },
+                    label = { Text("Reason (required)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (canRestock) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = restock, onCheckedChange = { restock = it })
+                        Text("Put the items back in stock (not yet prepared or handed over)")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(reason, restock && canRestock) }, enabled = reason.isNotBlank()) {
+                Text(if (retry) "Retry refund" else "Refund")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun AdminOrderCard(
+    order: AdminOrder,
+    isUpdating: Boolean,
+    onReady: () -> Unit,
+    onCollected: () -> Unit,
+    onRefund: () -> Unit,
+) {
     val o = order.order
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(Modifier.padding(16.dp)) {
@@ -156,6 +227,22 @@ private fun AdminOrderCard(order: AdminOrder, isUpdating: Boolean, onReady: () -
                     modifier = Modifier.padding(top = 8.dp),
                 )
                 else -> Unit
+            }
+            order.refund?.let { refund ->
+                Text(
+                    refund.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (refund == RefundState.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+            if (order.canRefund) {
+                TextButton(onClick = onRefund, enabled = !isUpdating, modifier = Modifier.padding(top = 4.dp)) {
+                    Text(
+                        if (order.refund == null) "Refund" else "Retry refund",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
     }

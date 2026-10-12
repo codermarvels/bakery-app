@@ -12,10 +12,18 @@ import com.vsjbakery.app.domain.model.Order
 import com.vsjbakery.app.domain.model.OrderItem
 import com.vsjbakery.app.domain.model.OrderStatus
 import com.vsjbakery.app.domain.model.ProductDraft
+import com.vsjbakery.app.domain.model.RefundState
 import com.vsjbakery.app.domain.model.StockDifference
 import com.vsjbakery.app.domain.model.StockMovement
 import com.vsjbakery.app.domain.model.StockMovementType
+import com.vsjbakery.app.data.payments.PaymentException
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.functions.functions
+import io.ktor.client.statement.bodyAsText
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.longOrNull
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -58,6 +66,9 @@ interface AdminRepository {
 
     suspend fun appOrders(): List<AdminOrder>
     suspend fun setOrderStatus(orderId: String, status: OrderStatus)
+
+    /** Full refund of a paid app order through Razorpay (done by the server). Returns the amount. */
+    suspend fun refundOrder(orderId: String, reason: String, restock: Boolean): Long
 
     suspend fun recordCounterSale(quantities: Map<String, Int>, method: CounterPaymentMethod, note: String?): Long
     suspend fun counterSalesToday(): List<CounterSale>
@@ -122,6 +133,12 @@ private data class ProfileRow(
     val id: String,
     @SerialName("full_name") val fullName: String = "",
     val phone: String? = null,
+)
+
+@Serializable
+private data class RefundRow(
+    @SerialName("order_id") val orderId: String,
+    val status: String,
 )
 
 @Serializable
@@ -314,12 +331,39 @@ class SupabaseAdminRepository(
                 .decodeList<ProfileRow>()
                 .associateBy { it.id }
         }
+        val orderIds = rows.map { it.id }
+        val paidOnline = if (orderIds.isEmpty()) {
+            emptySet()
+        } else {
+            client.from("payments")
+                .select(Columns.list("order_id", "provider")) {
+                    filter {
+                        isIn("order_id", orderIds)
+                        eq("status", "captured")
+                        eq("provider", "razorpay")
+                    }
+                }
+                .decodeList<PaymentRow>()
+                .map { it.orderId }
+                .toSet()
+        }
+        val refunds = if (orderIds.isEmpty()) {
+            emptyMap()
+        } else {
+            client.from("refunds")
+                .select(Columns.list("order_id", "status")) { filter { isIn("order_id", orderIds) } }
+                .decodeList<RefundRow>()
+                .associate { it.orderId to RefundState.fromDatabase(it.status) }
+        }
         return rows.map { row ->
             val profile = row.customerId?.let(profiles::get)
             AdminOrder(
                 order = row.toOrder(),
-                customerName = profile?.fullName?.ifBlank { null } ?: "Customer",
+                customerName = profile?.fullName?.ifBlank { null }
+                    ?: if (row.customerId == null) "Deleted account" else "Customer",
                 customerPhone = profile?.phone,
+                paidOnline = row.id in paidOnline,
+                refund = refunds[row.id],
             )
         }
     }
@@ -337,6 +381,25 @@ class SupabaseAdminRepository(
                 put("p_status", value)
             },
         )
+    }
+
+    override suspend fun refundOrder(orderId: String, reason: String, restock: Boolean): Long {
+        val response = client.functions.invoke(
+            function = "payments",
+            body = buildJsonObject {
+                put("action", "refund")
+                put("order_id", orderId)
+                put("reason", reason.trim())
+                put("restock", restock)
+            },
+        )
+        val result = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+        if (result["ok"]?.jsonPrimitive?.booleanOrNull != true) {
+            throw PaymentException(
+                result["error"]?.jsonPrimitive?.contentOrNull ?: "The refund could not be completed. Please try again.",
+            )
+        }
+        return result["amount_paise"]?.jsonPrimitive?.longOrNull ?: 0
     }
 
     override suspend fun recordCounterSale(

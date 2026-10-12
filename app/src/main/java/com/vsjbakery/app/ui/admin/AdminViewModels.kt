@@ -234,6 +234,26 @@ class AdminOrdersViewModel(private val repository: AdminRepository?) : ViewModel
         }
     }
 
+    /** Full refund through Razorpay, done by the server; [restock] puts unhanded items back. */
+    fun refund(order: AdminOrder, reason: String, restock: Boolean) {
+        val repo = repository ?: return
+        if (_state.value.updatingId != null) return
+        _state.update { it.copy(updatingId = order.order.id, message = null) }
+        viewModelScope.launch {
+            attempt { repo.refundOrder(order.order.id, reason, restock) }
+                .onSuccess { amount ->
+                    val text = "Order #${order.order.number}: ${Money.formatRupees(amount)} refunded to the customer's " +
+                        "original payment method. Banks usually show it within 5–7 working days."
+                    _state.update { it.copy(updatingId = null, message = AdminMessage(text)) }
+                    load()
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(updatingId = null, message = AdminMessage(RemoteErrors.message(e), isError = true)) }
+                    load()
+                }
+        }
+    }
+
     fun clearMessage() = _state.update { it.copy(message = null) }
 }
 
