@@ -115,6 +115,12 @@ How ordering works:
 - Customers can cancel their own unpaid orders.
 - Admin and reports accounts can't place orders, so staff accounts stay clean.
 
+## 7. Stage 5 — admin tools (do this once)
+
+**SQL Editor → New query:** paste and **Run** `supabase/migrations/20261014090000_admin_tools.sql`.
+It adds counter sales, order progress (ready / collected), undo for counter sales and the end-of-day
+stock count. All of these are administrator-only. How to use them: `docs/ADMIN_GUIDE.md`.
+
 ## How the security works (plain language)
 
 - **Row Level Security (RLS)** is a filter the database applies to every request. Even if someone
@@ -130,4 +136,4 @@ How ordering works:
   server code with secret keys can do that (Stage 4).
 - Stock can never go below zero.
 
-These rules are checked by 79 automated tests in `supabase/tests/database/` (run with `supabase test db`).
+These rules are checked by 155 automated tests in `supabase/tests/database/` (run with `supabase test db`).
