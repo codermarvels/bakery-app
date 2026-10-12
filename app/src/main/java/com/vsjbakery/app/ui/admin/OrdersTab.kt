@@ -155,7 +155,7 @@ private fun RefundDialog(order: AdminOrder, onConfirm: (String, Boolean) -> Unit
                 OutlinedTextField(
                     value = reason,
                     onValueChange = { reason = it.take(250) },
-                    label = { Text("Reason (required)") },
+                    label = { Text("Reason (the customer sees this)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )

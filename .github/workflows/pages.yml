@@ -25,7 +25,7 @@ jobs:
     outputs:
       ready: ${{ steps.pages.outputs.ready }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # Incomplete policies are never published: until every line of site/details.properties
       # is filled in, the site is only checked (with a warning) and not deployed.
       - name: Build pages

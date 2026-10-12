@@ -41,6 +41,10 @@ reset emails, so you need your own email sender (SMTP).
    <p>If you did not ask for this, ignore this email; your password stays the same.</p>
    ```
 4. **Authentication → Sign In / Providers → Email:** keep **Confirm email ON** for real customers.
+   **Authentication → URL Configuration → Site URL:** set it to
+   `https://codermarvels.github.io/bakery-app/email-confirmed.html` and **Save**. This is the page the
+   confirmation link opens afterwards. The default, `http://localhost:3000`, shows a "localhost" error
+   on phones, even though the account was confirmed.
 5. **Authentication → Rate limits:** the email limit can now be raised (e.g. 60 per hour).
 6. Test: **Forgot password?** on the sign-in screen, using your own customer account.
 

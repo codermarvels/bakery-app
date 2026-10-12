@@ -39,8 +39,34 @@ data class Order(
     val pickupNote: String?,
     val createdAt: String,
     val items: List<OrderItem>,
+    /** Set when the bakery refunded this order (or a refund is on its way). */
+    val refund: OrderRefund? = null,
 ) {
     val canCancel: Boolean get() = status == OrderStatus.PENDING_PAYMENT
+}
+
+/** A refund as the customer sees it in "My orders". */
+data class OrderRefund(
+    val amountPaise: Long,
+    val state: RefundState,
+    val processedAt: String?,
+    val reason: String?,
+) {
+    /** Short label for the status chip. */
+    val chipLabel: String get() = if (state == RefundState.PROCESSED) "Refunded" else "Refund pending"
+
+    /** Plain-language explanation; a failed attempt is shown as pending because the bakery retries it. */
+    fun customerMessage(): String {
+        val amount = Money.formatRupees(amountPaise)
+        val because = reason?.trim()?.takeIf { it.isNotEmpty() }?.let { " Reason: $it." }.orEmpty()
+        return if (state == RefundState.PROCESSED) {
+            val day = processedAt?.let { " on ${OrderDates.display(it)}" }.orEmpty()
+            "$amount was refunded$day to the UPI account, card or bank you paid with. " +
+                "Banks usually show it within 5–7 working days.$because"
+        } else {
+            "A refund of $amount is being processed to the UPI account, card or bank you paid with.$because"
+        }
+    }
 }
 
 /**

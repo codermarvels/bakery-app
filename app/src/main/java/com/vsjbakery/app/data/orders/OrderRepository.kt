@@ -2,7 +2,9 @@ package com.vsjbakery.app.data.orders
 
 import com.vsjbakery.app.domain.model.Order
 import com.vsjbakery.app.domain.model.OrderItem
+import com.vsjbakery.app.domain.model.OrderRefund
 import com.vsjbakery.app.domain.model.OrderStatus
+import com.vsjbakery.app.domain.model.RefundState
 import com.vsjbakery.app.domain.model.PlacedOrder
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
@@ -45,6 +47,14 @@ private data class OrderItemRow(
 )
 
 @Serializable
+private data class RefundRow(
+    @SerialName("amount_paise") val amountPaise: Long,
+    val status: String,
+    @SerialName("processed_at") val processedAt: String? = null,
+    val reason: String? = null,
+)
+
+@Serializable
 private data class OrderRow(
     val id: String,
     @SerialName("order_number") val orderNumber: Long,
@@ -53,6 +63,7 @@ private data class OrderRow(
     @SerialName("pickup_note") val pickupNote: String? = null,
     @SerialName("created_at") val createdAt: String,
     @SerialName("order_items") val items: List<OrderItemRow> = emptyList(),
+    val refunds: List<RefundRow> = emptyList(),
 )
 
 class SupabaseOrderRepository(private val client: SupabaseClient) : OrderRepository {
@@ -79,7 +90,8 @@ class SupabaseOrderRepository(private val client: SupabaseClient) : OrderReposit
             .select(
                 Columns.raw(
                     "id, order_number, status, total_paise, pickup_note, created_at, " +
-                        "order_items(product_name, unit_price_paise, quantity, line_total_paise)",
+                        "order_items(product_name, unit_price_paise, quantity, line_total_paise), " +
+                        "refunds(amount_paise, status, processed_at, reason)",
                 ),
             ) {
                 order("created_at", SortOrder.DESCENDING)
@@ -96,6 +108,9 @@ class SupabaseOrderRepository(private val client: SupabaseClient) : OrderReposit
                     createdAt = row.createdAt,
                     items = row.items.map {
                         OrderItem(it.productName, it.unitPricePaise, it.quantity, it.lineTotalPaise)
+                    },
+                    refund = row.refunds.firstOrNull()?.let { r ->
+                        RefundState.fromDatabase(r.status)?.let { OrderRefund(r.amountPaise, it, r.processedAt, r.reason) }
                     },
                 )
             }
