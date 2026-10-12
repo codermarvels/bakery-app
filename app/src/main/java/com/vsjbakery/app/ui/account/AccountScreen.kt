@@ -142,11 +142,20 @@ private fun SignedInContent(
     ) {
         item { ProfileCard(profile) }
         when (profile.role) {
-            AppRole.ADMIN -> item {
-                Button(onClick = onOpenAdmin, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.AdminPanelSettings, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Open admin dashboard")
+            AppRole.ADMIN -> {
+                item {
+                    Button(onClick = onOpenAdmin, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Filled.AdminPanelSettings, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Open admin dashboard")
+                    }
+                }
+                item {
+                    OutlinedButton(onClick = onOpenReports, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Filled.Assessment, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Sales reports")
+                    }
                 }
             }
             AppRole.REPORTS -> item {

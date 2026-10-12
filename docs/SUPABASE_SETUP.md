@@ -121,6 +121,12 @@ How ordering works:
 It adds counter sales, order progress (ready / collected), undo for counter sales and the end-of-day
 stock count. All of these are administrator-only. How to use them: `docs/ADMIN_GUIDE.md`.
 
+## 8. Stage 6 — sales reports (do this once)
+
+**SQL Editor → New query:** paste and **Run** `supabase/migrations/20261015090000_sales_reports.sql`.
+It adds the read-only `sales_report` function used by the Reports screen. Only the reports and
+administrator accounts can call it. How to read the reports: `docs/REPORTS_GUIDE.md`.
+
 ## How the security works (plain language)
 
 - **Row Level Security (RLS)** is a filter the database applies to every request. Even if someone
@@ -136,4 +142,4 @@ stock count. All of these are administrator-only. How to use them: `docs/ADMIN_G
   server code with secret keys can do that (Stage 4).
 - Stock can never go below zero.
 
-These rules are checked by 155 automated tests in `supabase/tests/database/` (run with `supabase test db`).
+These rules are checked by 184 automated tests in `supabase/tests/database/` (run with `supabase test db`).

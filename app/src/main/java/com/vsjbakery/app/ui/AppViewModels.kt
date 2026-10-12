@@ -12,6 +12,7 @@ import com.vsjbakery.app.ui.admin.CounterViewModel
 import com.vsjbakery.app.ui.auth.AuthViewModel
 import com.vsjbakery.app.ui.orders.OrdersViewModel
 import com.vsjbakery.app.ui.payments.PaymentViewModel
+import com.vsjbakery.app.ui.reports.ReportsViewModel
 import com.vsjbakery.app.ui.shop.ShopViewModel
 
 private fun CreationExtras.container(): AppContainer =
@@ -32,4 +33,5 @@ val AppViewModelFactory = viewModelFactory {
     initializer { AdminCatalogViewModel(container().adminRepository) }
     initializer { AdminOrdersViewModel(container().adminRepository) }
     initializer { CounterViewModel(container().adminRepository) }
+    initializer { ReportsViewModel(container().reportsRepository) }
 }
