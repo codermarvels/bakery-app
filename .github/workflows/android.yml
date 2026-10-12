@@ -16,7 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       # Optional overrides (Settings → Secrets and variables → Actions). When empty, the public
       # project defaults in gradle.properties are used.
@@ -65,6 +65,43 @@ jobs:
           name: vsj-bakery-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
+
+      # Release build: shrunk with R8, exactly what goes to Google Play. Signed with the upload
+      # key when the RELEASE_KEYSTORE_BASE64 secret is set (see docs/RELEASE.md); otherwise with
+      # the debug key, which is only good for testing on an emulator.
+      - name: Prepare release signing key
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+            echo "VSJ_RELEASE_STORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+            echo "RELEASE_KIND=signed-for-play" >> "$GITHUB_ENV"
+          else
+            echo "::notice title=Release build uses the test key::Add the RELEASE_KEYSTORE_BASE64 secret to produce a Play Store upload."
+            echo "RELEASE_KIND=TEST-ONLY-debug-signed" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build release APK and bundle
+        env:
+          VSJ_RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          VSJ_RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          VSJ_RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon assembleRelease bundleRelease
+
+      - name: Remove the decoded signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+
+      - name: Upload release build
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsj-bakery-release-${{ env.RELEASE_KIND }}
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/mapping/release/mapping.txt
+          retention-days: 30
 
       - name: Upload reports
         if: always()

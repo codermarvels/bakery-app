@@ -27,7 +27,7 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Supabase URL + publishable key committed in `gradle.properties` (public by design); overridable; CI blocks secret keys
 - ✅ Migrations applied to the live Supabase project
 - ✅ Admin and reports accounts created; customer, admin and reports sign-in confirmed on the emulator
-- ⬜ Password reset by email (planned with the confirmation landing page)
+- ✅ Password reset with an emailed one-time code (Stage 7)
 
 ## Stage 3 — Catalogue & cart ✅
 - ✅ Products by category from Supabase: photo (or category icon), name, price, availability ("In stock" / "Only 3 left" / "Sold out")
@@ -74,7 +74,7 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Admin guide: `docs/ADMIN_GUIDE.md`
 - ✅ Migration applied and every tab tested on the emulator
 
-## Stage 6 — Reports (read-only role) 🟡 (code done — apply migration, then test on the emulator)
+## Stage 6 — Reports (read-only role) ✅
 - ✅ `sales_report(from, to)` database function: staff only, read-only, Indian-time days, max one year
 - ✅ Today, Yesterday, This month, Last month and Custom (date-range picker)
 - ✅ Paid orders (app / counter), gross sales, refunds, net sales, money by payment method,
@@ -82,11 +82,22 @@ Legend: ✅ done · 🟡 partly done · ⬜ pending
 - ✅ Export PDF (A4, multi-page) and share through any app (WhatsApp, Gmail, Drive…)
 - ✅ Reports account and administrator can both open it; everyone else is refused by the database
 - ✅ 29 new database tests (184 in total) and app unit tests for the report parser
-- ⬜ **You:** run `20261015090000_sales_reports.sql` in the SQL editor (`docs/SUPABASE_SETUP.md` step 8)
-- ⬜ **You:** open reports as the reports user, compare with a day you know, export a PDF
+- ✅ Migration applied; reports and PDF export confirmed on the emulator
 
-## Stage 7 — Release ⬜
-- ⬜ Instrumented UI tests, security review
-- ⬜ Release signing (keystore kept outside Git)
-- ⬜ Switch gateway to live mode
-- ⬜ Play Store listing
+## Stage 7 — Release & go-live 🟡 (code done — your steps are in `docs/GO_LIVE.md`)
+- ✅ **Delete my account** (Google Play requirement): removes sign-in, name and phone; cancels unpaid
+  orders; keeps past sales anonymously; refused while a paid order awaits pickup; staff excluded
+- ✅ **Forgot password** with an emailed one-time code
+- ✅ **Admin refunds** of paid app orders through Razorpay, recorded in the database (reports and
+  stock stay right), optional restock, safe retry that never refunds twice
+- ✅ Policy website (`site/`): terms, cancellation & refund, pickup (no delivery), privacy, contact,
+  account deletion; published by GitHub Pages only when the bakery details are filled in
+- ✅ Account tab links to the policies
+- ✅ Release build: R8 shrinking, signing from GitHub secrets / `local.properties` (never in Git),
+  signed `.aab` + `.apk` + `mapping.txt` built by CI; version 1.0.0
+- ✅ Go-live cleanup script for test data (`supabase/snippets/go_live_cleanup.sql`)
+- ✅ 35 new database tests (219 in total), 4 new payment-function tests (16 in total), app unit tests
+- ✅ Security review of the new server paths (role checks in database and function, no secrets in app)
+- ⬜ **You:** steps 1–7 of `docs/GO_LIVE.md` (migrations, SMTP + reset email, policy details,
+  Razorpay KYC & live keys, cleanup, upload key, Play Console)
+- ⬜ Later (optional): instrumented UI tests, customer-facing refund status, push notifications

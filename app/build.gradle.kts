@@ -21,6 +21,11 @@ fun buildSetting(propertyKey: String, environmentKey: String): String =
         providers.gradleProperty("vsj.$propertyKey").orNull,
     ).firstOrNull { !it.isNullOrBlank() }?.trim().orEmpty()
 
+// Release signing (Google Play upload key). The keystore file and passwords NEVER go in Git:
+// they come from local.properties (release.storeFile=…, release.storePassword=…,
+// release.keyAlias=…, release.keyPassword=…) or from CI secrets. See docs/RELEASE.md.
+val releaseStoreFile = buildSetting("release.storeFile", "VSJ_RELEASE_STORE_FILE")
+
 android {
     namespace = "com.vsjbakery.app"
     compileSdk = 35
@@ -29,8 +34,8 @@ android {
         applicationId = "com.vsjbakery.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.6.0"
+        versionCode = 7
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -41,10 +46,26 @@ android {
             "SUPABASE_PUBLISHABLE_KEY",
             "\"${buildSetting("supabase.publishableKey", "SUPABASE_PUBLISHABLE_KEY")}\"",
         )
+        // Website with the privacy policy, terms and contact page (linked from the Account tab).
+        buildConfigField("String", "POLICIES_URL", "\"${buildSetting("policies.url", "POLICIES_URL")}\"")
+    }
+
+    signingConfigs {
+        if (releaseStoreFile.isNotEmpty()) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = buildSetting("release.storePassword", "VSJ_RELEASE_STORE_PASSWORD")
+                keyAlias = buildSetting("release.keyAlias", "VSJ_RELEASE_KEY_ALIAS")
+                keyPassword = buildSetting("release.keyPassword", "VSJ_RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
+            // Without the upload key, the release build is signed with the debug key so it can
+            // be installed on an emulator for testing. Google Play rejects such builds.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

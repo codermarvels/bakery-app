@@ -25,6 +25,11 @@ The dashboard has four tabs. Every tab has an **ⓘ** button that explains what 
 ## Orders tab
 - **To prepare**: paid app orders. **Ready**: waiting at the counter. **Collected**: done.
 - **Unpaid**: the customer has not paid yet. **Do not prepare these.**
+- **Refund** (paid app orders): gives the full amount back to the customer's UPI / card / bank through
+  Razorpay and cancels the order. Enter a reason. Tick *Put the items back in stock* if the order was not
+  prepared or handed over. Always refund here, not only in the Razorpay dashboard, so reports and stock
+  stay correct. If it says the refund failed, tap **Retry refund** later. It never refunds twice.
+- Orders from customers who deleted their account show as *Deleted account*.
 
 ## Stock tab
 - **+ Made**: fresh production.

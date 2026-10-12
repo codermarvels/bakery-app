@@ -23,4 +23,11 @@ object CredentialsValidator {
         name.trim().length > 100 -> "Name is too long"
         else -> null
     }
+
+    /** The code in the password-reset email: 6 to 10 digits, depending on project settings. */
+    fun resetCodeError(code: String): String? = when {
+        code.isBlank() -> "Enter the code from the email"
+        !code.trim().matches(Regex("^[0-9]{6,10}$")) -> "The code is the number in the email (6 or more digits)"
+        else -> null
+    }
 }

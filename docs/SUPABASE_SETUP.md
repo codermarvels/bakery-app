@@ -127,6 +127,11 @@ stock count. All of these are administrator-only. How to use them: `docs/ADMIN_G
 It adds the read-only `sales_report` function used by the Reports screen. Only the reports and
 administrator accounts can call it. How to read the reports: `docs/REPORTS_GUIDE.md`.
 
+## 9. Stage 7 — go-live
+
+Everything for launch (two more migrations, email settings, Razorpay live mode, test-data cleanup)
+is in **`docs/GO_LIVE.md`**.
+
 ## How the security works (plain language)
 
 - **Row Level Security (RLS)** is a filter the database applies to every request. Even if someone
@@ -142,4 +147,4 @@ administrator accounts can call it. How to read the reports: `docs/REPORTS_GUIDE
   server code with secret keys can do that (Stage 4).
 - Stock can never go below zero.
 
-These rules are checked by 184 automated tests in `supabase/tests/database/` (run with `supabase test db`).
+These rules are checked by 219 automated tests in `supabase/tests/database/` (run with `supabase test db`).

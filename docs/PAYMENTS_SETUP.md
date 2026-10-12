@@ -108,7 +108,9 @@ Go to **Razorpay Dashboard (Test Mode) → Account & Settings → Webhooks → A
    - **`products`:** stock reduced.
    - **Razorpay Dashboard → Transactions → Payments:** the payment is listed.
 
-## Going live later (not now)
+## Going live
+
+The full step-by-step list is in **`docs/GO_LIVE.md`** (section 4). In short:
 
 - Complete Razorpay's KYC and add the bakery's **bank account for settlements**. This can be the
   SBI account behind `vsj87@oksbi`. Customers can still pay with Google Pay or any UPI app;

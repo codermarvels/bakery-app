@@ -11,6 +11,8 @@ pickup, the administrator manages products and stock, and a read-only reporting 
 
 Administrators: see [`docs/ADMIN_GUIDE.md`](docs/ADMIN_GUIDE.md).
 Reports: see [`docs/REPORTS_GUIDE.md`](docs/REPORTS_GUIDE.md).
+Launch: [`docs/GO_LIVE.md`](docs/GO_LIVE.md) and [`docs/RELEASE.md`](docs/RELEASE.md).
+Policy website (privacy, terms, refunds): <https://codermarvels.github.io/bakery-app/>, from `site/`.
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the stages and
 [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for progress.
 
@@ -29,14 +31,16 @@ app/src/main/java/com/vsjbakery/app/
     ├── theme/               # colours, fonts, shapes
     ├── components/          # reusable UI pieces
     ├── auth/                # AuthViewModel: sign-in state shared by all screens
-    └── home/ category/ cart/ orders/ payments/ admin/ account/ staff/   # screens
+    └── home/ category/ cart/ orders/ payments/ admin/ account/ reports/   # screens
 supabase/
 ├── functions/               # server code: payments + Razorpay webhook (holds secret keys)
 ├── migrations/              # database tables, security rules, storage bucket, seed data
+├── snippets/                # one-off SQL: sample products, go-live cleanup
 ├── tests/database/          # automated security tests (pgTAP)
 └── config.toml              # Supabase CLI settings
 gradle/libs.versions.toml    # every library version in one place
-.github/workflows/            # CI: Android tests/lint/APK, database security tests
+.github/workflows/            # CI: Android tests/lint/APKs/bundle, database tests, function deploy, policy website
+site/                         # public policy pages (GitHub Pages)
 ```
 
 ## Run it on your computer
@@ -64,5 +68,5 @@ download the `vsj-bakery-debug-apk` artifact, unzip it and install the APK on an
 ## Secrets
 
 Never commit keys or passwords. `local.properties`, keystores and `.env` files are git-ignored.
-Server-side secrets (payment gateway secret key, Supabase service-role key) will live only in
-Supabase project secrets — never in the app.
+Server-side secrets (Razorpay key secret and webhook secret) live only in Supabase Edge Function
+secrets; the release signing key lives only in GitHub Actions secrets (see `docs/RELEASE.md`).

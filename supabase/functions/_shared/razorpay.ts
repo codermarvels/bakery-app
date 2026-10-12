@@ -66,6 +66,8 @@ export interface PaymentGateway {
   listOrderPayments(razorpayOrderId: string): Promise<RazorpayPayment[]>;
   capturePayment(paymentId: string, amountPaise: number): Promise<RazorpayPayment>;
   refundPayment(paymentId: string, amountPaise: number, reason: string): Promise<{ id: string }>;
+  /** Refunds already made on a payment (used before retrying, so nobody is refunded twice). */
+  listRefunds(paymentId: string): Promise<Array<{ id: string; status: string }>>;
 }
 
 export class RazorpayApi implements PaymentGateway {
@@ -122,6 +124,14 @@ export class RazorpayApi implements PaymentGateway {
       amount: amountPaise,
       notes: { reason: reason.slice(0, 250) },
     });
+  }
+
+  async listRefunds(paymentId: string) {
+    const page = await this.call<{ items?: Array<{ id: string; status: string }> }>(
+      "GET",
+      `/payments/${encodeURIComponent(paymentId)}/refunds`,
+    );
+    return page.items ?? [];
   }
 }
 
@@ -217,6 +227,56 @@ export async function settleRazorpayOrder(
     attempts.find((p) => p.status === "authorized");
   if (!paid) return { result: "not_captured" };
   return settlePayment(gateway, db, razorpayOrderId, paid.id);
+}
+
+// ------------------------------------------------------------------ admin refunds
+
+/** What start_app_refund returns: the refund row to send through Razorpay. */
+export interface RefundStart {
+  refund_id: string;
+  provider_payment_id: string;
+  amount_paise: number;
+  order_number: number;
+  /** True when this refund was started before (pending or failed) and is being sent again. */
+  retry: boolean;
+}
+
+/**
+ * Sends a refund that the database has already recorded as pending, then records the result.
+ * On a retry it first asks Razorpay whether the refund already went through (for example the
+ * function stopped after Razorpay accepted it), so a customer is never refunded twice.
+ */
+export async function sendRefund(
+  gateway: PaymentGateway,
+  db: Rpc,
+  start: RefundStart,
+  reason: string,
+): Promise<{ ok: boolean; provider_refund_id?: string }> {
+  try {
+    let providerRefundId: string | undefined;
+    if (start.retry) {
+      providerRefundId = (await gateway.listRefunds(start.provider_payment_id))
+        .find((r) => r.status !== "failed")?.id;
+    }
+    if (!providerRefundId) {
+      providerRefundId = (await gateway.refundPayment(start.provider_payment_id, start.amount_paise, reason)).id;
+    }
+    const { error } = await db.rpc("complete_refund", {
+      p_refund_id: start.refund_id,
+      p_provider_refund_id: providerRefundId,
+      p_succeeded: true,
+    });
+    if (error) console.error("Refund sent but not recorded; retrying will record it", error);
+    return { ok: !error, provider_refund_id: providerRefundId };
+  } catch (e) {
+    console.error("Refund failed; recorded as failed so the administrator can retry", e);
+    await db.rpc("complete_refund", {
+      p_refund_id: start.refund_id,
+      p_provider_refund_id: null,
+      p_succeeded: false,
+    });
+    return { ok: false };
+  }
 }
 
 export function requireEnv(name: string): string {

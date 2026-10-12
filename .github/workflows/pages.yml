@@ -1,0 +1,63 @@
+name: Policy website
+
+# Publishes site/ (privacy, terms, refunds, pickup, contact, account deletion) to GitHub Pages:
+# https://codermarvels.github.io/bakery-app/
+# One-time setup: GitHub → Settings → Pages → Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/pages.yml"]
+  pull_request:
+    paths: ["site/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.pages.outputs.ready }}
+    steps:
+      - uses: actions/checkout@v4
+      # Incomplete policies are never published: until every line of site/details.properties
+      # is filled in, the site is only checked (with a warning) and not deployed.
+      - name: Build pages
+        id: pages
+        run: |
+          set +e
+          python3 site/build.py _site
+          code=$?
+          if [ $code -eq 0 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          elif [ $code -eq 2 ]; then
+            echo "::warning title=Policy website not published::Fill in every line of site/details.properties (see docs/GO_LIVE.md)."
+            python3 site/build.py _site --preview || exit 1
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            exit $code
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main' && steps.pages.outputs.ready == 'true'
+        with:
+          path: _site
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.ready == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

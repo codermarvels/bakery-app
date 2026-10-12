@@ -1,8 +1,10 @@
 package com.vsjbakery.app.data.auth
 
+import com.vsjbakery.app.data.RemoteErrors
 import com.vsjbakery.app.domain.model.AppRole
 import com.vsjbakery.app.domain.model.UserProfile
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -11,6 +13,7 @@ import io.github.jan.supabase.auth.user.UserInfo
 import io.github.jan.supabase.exceptions.HttpRequestException
 import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -116,6 +119,41 @@ class SupabaseAuthRepository(
         client.auth.currentUserOrNull()?.let { loadProfile(it) }
     }
 
+    override suspend fun sendPasswordResetCode(email: String): String? = try {
+        // Supabase answers the same way whether or not the email has an account, so this
+        // cannot be used to find out who is a customer.
+        client.auth.resetPasswordForEmail(email.trim())
+        null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        friendlyMessage(e)
+    }
+
+    override suspend fun resetPassword(email: String, code: String, newPassword: String): AuthResult = guard {
+        client.auth.verifyEmailOtp(type = OtpType.Email.RECOVERY, email = email.trim(), token = code.trim())
+        client.auth.updateUser { password = newPassword }
+        val user = client.auth.currentUserOrNull()
+            ?: return@guard AuthResult.Failure("Password changed. Please sign in with your new password.")
+        when (val state = loadProfile(user)) {
+            is AuthState.SignedIn -> AuthResult.SignedIn(state.profile)
+            is AuthState.ProfileUnavailable -> AuthResult.Failure(state.message)
+            else -> AuthResult.Failure("Password changed. Please sign in with your new password.")
+        }
+    }
+
+    override suspend fun deleteAccount(): String? = try {
+        client.postgrest.rpc("delete_my_account")
+        // The account no longer exists on the server, so only the phone's copy is cleared.
+        client.auth.clearSession()
+        _authState.value = AuthState.SignedOut
+        null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        RemoteErrors.message(e)
+    }
+
     private suspend fun loadProfile(user: UserInfo): AuthState {
         val email = user.email.orEmpty()
         val state = try {
@@ -172,6 +210,8 @@ object AuthErrorMessages {
             "Too many attempts. Please wait a few minutes and try again."
         "signup_disabled" -> "New sign-ups are currently turned off."
         "user_banned" -> "This account has been blocked. Please contact the bakery."
+        "otp_expired" -> "That code is wrong or has expired. Ask for a new code."
+        "same_password" -> "Choose a password different from your old one."
         else -> fallback?.takeIf { it.isNotBlank() } ?: "Sign-in failed. Please try again."
     }
 }

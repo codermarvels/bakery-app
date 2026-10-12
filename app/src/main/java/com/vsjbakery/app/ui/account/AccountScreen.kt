@@ -22,8 +22,13 @@ import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,6 +42,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -44,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.vsjbakery.app.data.auth.AuthState
 import com.vsjbakery.app.domain.model.AppRole
 import com.vsjbakery.app.domain.model.UserProfile
+import com.vsjbakery.app.ui.auth.DeleteAccountState
 import com.vsjbakery.app.ui.components.EmptyState
 import com.vsjbakery.app.ui.components.MessageCard
 import com.vsjbakery.app.ui.components.SectionHeader
@@ -58,6 +69,10 @@ fun AccountScreen(
     onOpenOrders: () -> Unit,
     onRetryProfile: () -> Unit,
     onSignOut: () -> Unit,
+    deleteState: DeleteAccountState,
+    onDeleteAccount: () -> Unit,
+    onClearDeleteError: () -> Unit,
+    policiesUrl: String,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -78,6 +93,10 @@ fun AccountScreen(
                 onOpenReports = onOpenReports,
                 onOpenOrders = onOpenOrders,
                 onSignOut = onSignOut,
+                deleteState = deleteState,
+                onDeleteAccount = onDeleteAccount,
+                onClearDeleteError = onClearDeleteError,
+                policiesUrl = policiesUrl,
             )
             is AuthState.ProfileUnavailable -> EmptyState(
                 icon = Icons.Outlined.CloudOff,
@@ -93,18 +112,34 @@ fun AccountScreen(
             )
             AuthState.SignedOut, AuthState.NotConfigured -> SignedOutContent(
                 notConfigured = authState is AuthState.NotConfigured,
+                accountDeleted = deleteState.deleted,
                 onSignIn = onSignIn,
+                policiesUrl = policiesUrl,
             )
         }
     }
 }
 
 @Composable
-private fun SignedOutContent(notConfigured: Boolean, onSignIn: (AppRole) -> Unit) {
+private fun SignedOutContent(
+    notConfigured: Boolean,
+    accountDeleted: Boolean,
+    onSignIn: (AppRole) -> Unit,
+    policiesUrl: String,
+) {
     LazyColumn(
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (accountDeleted) {
+            item {
+                MessageCard(
+                    icon = Icons.Outlined.CheckCircle,
+                    message = "Your account has been deleted. Thank you for ordering from VSJ BAKERY.",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+        }
         if (notConfigured) {
             item {
                 MessageCard(
@@ -125,6 +160,72 @@ private fun SignedOutContent(notConfigured: Boolean, onSignIn: (AppRole) -> Unit
         }
         item { RoleCard(AppRole.ADMIN, Icons.Filled.AdminPanelSettings) { onSignIn(AppRole.ADMIN) } }
         item { RoleCard(AppRole.REPORTS, Icons.Filled.Assessment) { onSignIn(AppRole.REPORTS) } }
+        item { PolicyLinks(policiesUrl, Modifier.padding(horizontal = 16.dp)) }
+    }
+}
+
+/** Links to the bakery's policy pages (the same pages Razorpay and Google Play check). */
+@Composable
+private fun PolicyLinks(baseUrl: String, modifier: Modifier = Modifier) {
+    if (baseUrl.isBlank()) return
+    val uriHandler = LocalUriHandler.current
+    val base = baseUrl.trimEnd('/')
+    Column(modifier.padding(top = 12.dp)) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        listOf(
+            "Privacy policy" to "privacy.html",
+            "Terms, cancellations & refunds" to "terms.html",
+            "Contact the bakery" to "contact.html",
+        ).forEach { (label, page) ->
+            TextButton(onClick = { runCatching { uriHandler.openUri("$base/$page") } }) { Text(label) }
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountSection(
+    state: DeleteAccountState,
+    onDelete: () -> Unit,
+    onClearError: () -> Unit,
+) {
+    var confirming by rememberSaveable { mutableStateOf(false) }
+    Column {
+        TextButton(onClick = { confirming = true }, enabled = !state.isDeleting) {
+            Icon(Icons.Outlined.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            Spacer(Modifier.width(8.dp))
+            Text("Delete my account", color = MaterialTheme.colorScheme.error)
+        }
+        if (state.isDeleting) CircularProgressIndicator(Modifier.padding(start = 12.dp).size(22.dp), strokeWidth = 2.dp)
+    }
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            icon = { Icon(Icons.Outlined.DeleteForever, contentDescription = null) },
+            title = { Text("Delete your account?") },
+            text = {
+                Text(
+                    "This permanently removes your sign-in, name and phone number. It cannot be undone.\n\n" +
+                        "• Unpaid orders are cancelled.\n" +
+                        "• Past orders stay in the bakery's sales records without your name.\n" +
+                        "• If an order is paid and waiting for pickup, collect it first.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirming = false
+                    onDelete()
+                }) { Text("Delete permanently", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirming = false }) { Text("Keep my account") } },
+        )
+    }
+    state.errorMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = onClearError,
+            title = { Text("Account not deleted") },
+            text = { Text(message) },
+            confirmButton = { TextButton(onClick = onClearError) { Text("OK") } },
+        )
     }
 }
 
@@ -135,6 +236,10 @@ private fun SignedInContent(
     onOpenReports: () -> Unit,
     onOpenOrders: () -> Unit,
     onSignOut: () -> Unit,
+    deleteState: DeleteAccountState,
+    onDeleteAccount: () -> Unit,
+    onClearDeleteError: () -> Unit,
+    policiesUrl: String,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
@@ -180,6 +285,10 @@ private fun SignedInContent(
                 Text("Sign out")
             }
         }
+        if (profile.role == AppRole.CUSTOMER) {
+            item { DeleteAccountSection(deleteState, onDeleteAccount, onClearDeleteError) }
+        }
+        item { PolicyLinks(policiesUrl) }
     }
 }
 

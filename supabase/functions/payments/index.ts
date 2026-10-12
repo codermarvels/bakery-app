@@ -12,7 +12,12 @@
 //     → checks the signature, asks Razorpay whether the money was captured, and only then
 //       marks the order paid (and reduces stock) in the database.
 //
-// The caller must be a signed-in customer (their Supabase access token is checked here).
+//   POST { "action": "refund", "order_id": "<uuid>", "reason": "...", "restock": true }
+//     → ADMINISTRATOR ONLY: refunds a paid app order in full through Razorpay and records it.
+//       Calling it again for a failed refund retries it (never refunding twice).
+//
+// The caller must be signed in (their Supabase access token is checked here); customers can only
+// act on their own orders, and only the administrator can refund.
 // Secrets used: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET (+ SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 // which Supabase provides automatically).
 
@@ -21,7 +26,9 @@ import {
   isValidCheckoutSignature,
   json,
   RazorpayApi,
+  type RefundStart,
   requireEnv,
+  sendRefund,
   settlePayment,
   settleRazorpayOrder,
 } from "../_shared/razorpay.ts";
@@ -151,6 +158,39 @@ Deno.serve(async (req) => {
 
       const result = await settlePayment(gateway, admin, razorpayOrderId, razorpayPaymentId);
       return json({ ok: true, ...result });
+    }
+
+    if (body.action === "refund") {
+      // Role from the database (via the verified user id), never from the request.
+      const { data: profile, error: profileError } = await admin
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profileError) console.error("refund: could not read profile", profileError);
+      if (profile?.role !== "admin") {
+        return json({ ok: false, error: "Only the administrator can refund orders." }, 403);
+      }
+
+      const reason = String(body.reason ?? "").trim();
+      const { data: start, error } = await admin.rpc("start_app_refund", {
+        p_order_id: String(body.order_id ?? ""),
+        p_admin_id: user.id,
+        p_reason: reason,
+        p_restock: body.restock === true,
+      });
+      if (error) return json({ ok: false, error: error.message });
+
+      const refund = start as RefundStart;
+      const sent = await sendRefund(gateway, admin, refund, reason || "Refund");
+      if (!sent.ok) {
+        return json({
+          ok: false,
+          error: "Razorpay could not send the refund right now. The order is marked for refund; " +
+            "tap Refund again later to retry.",
+        });
+      }
+      return json({ ok: true, result: "refunded", order_number: refund.order_number, amount_paise: refund.amount_paise });
     }
 
     return json({ ok: false, error: "Unknown action" }, 400);

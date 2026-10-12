@@ -5,7 +5,9 @@ import {
   isValidWebhookSignature,
   type PaymentGateway,
   type RazorpayPayment,
+  type RefundStart,
   type Rpc,
+  sendRefund,
   settlePayment,
   settleRazorpayOrder,
   timingSafeEqual,
@@ -66,6 +68,10 @@ class FakeGateway implements PaymentGateway {
     if (this.failRefund) return Promise.reject(new Error("gateway down"));
     this.refunds.push({ paymentId, amount });
     return Promise.resolve({ id: "rfnd_1" });
+  }
+  existingRefunds: Array<{ id: string; status: string }> = [];
+  listRefunds() {
+    return Promise.resolve(this.existingRefunds);
   }
 }
 
@@ -161,4 +167,53 @@ Deno.test("order check with no successful attempt changes nothing", async () => 
   const result = await settleRazorpayOrder(gateway, db, "order_1");
   assertEquals(result.result, "not_captured");
   assertEquals(db.calls.length, 0);
+});
+
+// ------------------------------------------------------------------ admin refunds
+
+const refundStart: RefundStart = {
+  refund_id: "ref-1",
+  provider_payment_id: "pay_1",
+  amount_paise: 25000,
+  order_number: 12,
+  retry: false,
+};
+
+Deno.test("an admin refund is sent to Razorpay and recorded as processed", async () => {
+  const gateway = new FakeGateway(capturedPayment);
+  const db = new FakeDb({});
+  const result = await sendRefund(gateway, db, refundStart, "Customer cancelled");
+  assertEquals(result.ok, true);
+  assertEquals(gateway.refunds, [{ paymentId: "pay_1", amount: 25000 }]);
+  assertEquals(db.calls[0], {
+    fn: "complete_refund",
+    args: { p_refund_id: "ref-1", p_provider_refund_id: "rfnd_1", p_succeeded: true },
+  });
+});
+
+Deno.test("a refund Razorpay refuses is recorded as failed", async () => {
+  const gateway = new FakeGateway(capturedPayment);
+  gateway.failRefund = true;
+  const db = new FakeDb({});
+  const result = await sendRefund(gateway, db, refundStart, "Customer cancelled");
+  assertEquals(result.ok, false);
+  assertEquals(db.calls[0].args.p_succeeded, false);
+});
+
+Deno.test("a retried refund that already went through is not sent twice", async () => {
+  const gateway = new FakeGateway(capturedPayment);
+  gateway.existingRefunds = [{ id: "rfnd_old", status: "processed" }];
+  const db = new FakeDb({});
+  const result = await sendRefund(gateway, db, { ...refundStart, retry: true }, "Retry");
+  assertEquals(result.ok, true);
+  assertEquals(gateway.refunds.length, 0);
+  assertEquals(db.calls[0].args.p_provider_refund_id, "rfnd_old");
+});
+
+Deno.test("a retry after a failed attempt sends the refund again", async () => {
+  const gateway = new FakeGateway(capturedPayment);
+  gateway.existingRefunds = [{ id: "rfnd_bad", status: "failed" }];
+  const db = new FakeDb({});
+  await sendRefund(gateway, db, { ...refundStart, retry: true }, "Retry");
+  assertEquals(gateway.refunds.length, 1);
 });
